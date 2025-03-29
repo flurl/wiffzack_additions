@@ -1,0 +1,586 @@
+<script setup>
+import { ref, watch, getCurrentInstance, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import ArticleList from './ArticleList.vue'
+import ModalDialog from './ModalDialog.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
+import { useStorageData } from '../composables/useStorageData';
+
+
+
+import axios from 'axios';
+
+const { t } = useI18n()
+
+// get the current instance
+const instance = getCurrentInstance();
+// get the global properties.
+const $terminalConfig = instance.appContext.config.globalProperties.$terminalConfig;
+const $destTerminalConfig = instance.appContext.config.globalProperties.$destTerminalConfig;
+
+const props = defineProps({
+    // from router
+    mode: String
+});
+
+
+
+
+// const sourceStorage = ref({ id: null, name: null });
+// const destinationStorage = ref({ id: null, name: null })
+let sourceStorageId = null;
+let destinationStorageId = null;
+if (props.mode === "request") {
+    sourceStorageId = null;
+    destinationStorageId = $terminalConfig.request_storage_id;
+} else if (props.mode === "distribute") {
+    sourceStorageId = $destTerminalConfig.request_storage_id;
+    destinationStorageId = $destTerminalConfig.transfer_storage_id;
+} else if (props.mode === "transfer") {
+    sourceStorageId = $terminalConfig.transfer_storage_id;
+    destinationStorageId = $terminalConfig.storage_id;
+} else if (props.mode === "stock") {
+    sourceStorageId = $terminalConfig.storage_id;
+    destinationStorageId = $terminalConfig.transfer_storage_id;
+}
+// check if the source and/or destination storage is overwritten manually
+const urlParams = new URLSearchParams(window.location.search);
+sourceStorageId = urlParams.has('sourceStorageId') ? urlParams.get('sourceStorageId') : null;
+destinationStorageId = urlParams.has('destinationStorageId') ? urlParams.get('destinationStorageId') : null;
+
+// if (sourceStorageId) {
+//     sourceStorage.value.id = sourceStorageId;
+// }
+// if (destinationStorageId) {
+//     destinationStorage.value.id = destinationStorageId;
+// }
+
+const {
+    sourceStorage,
+    destinationStorage,
+    articles,
+    articleGroups,
+    destStorageArticles,
+    activeArticleGroup,
+    // getArticleGroups,
+    getArticlesInDestinationStorage,
+    getArticlesInSourceStorage,
+    loading,
+    error
+} = useStorageData(sourceStorageId, destinationStorageId, props.mode);
+
+watch(activeArticleGroup, getArticlesInSourceStorage);
+
+
+
+// if (sourceStorage.value.id) {
+//     let url = `http://localhost:5000/api/get_storage_name/${sourceStorage.value.id}`;
+//     axios
+//         .get(url)
+//         .then((response) => {
+//             sourceStorage.value.name = response.data[0][0];
+//         })
+//         .catch((error) => {
+//             console.log(error);
+//         });
+// }
+// if (destinationStorage.value.id) {
+//     let url = `http://localhost:5000/api/get_storage_name/${destinationStorage.value.id}`;
+//     axios
+//         .get(url)
+//         .then((response) => {
+//             destinationStorage.value.name = response.data[0][0];
+//         })
+//         .catch((error) => {
+//             console.log(error);
+//         });
+// }
+
+
+const _amount = ref(1);
+if (props.mode === "distribute" || props.mode === "transfer") {
+    _amount.value = null;
+}
+const increment = () => {
+    _amount.value++;
+}
+const decrement = () => {
+    _amount.value--;
+}
+const amount = computed(() => {
+    if (_amount.value === null) {
+        return null;
+    }
+    if (_amount.value < 1) {
+        _amount.value = 1;
+    }
+    return _amount.value;
+});
+
+const destDisplayArticles = computed(() => {
+    if (!showDestInventory.value) {
+        return selectedArticles.value;
+    }
+
+    const displayArticles = JSON.parse(JSON.stringify(destStorageArticles.value)); // Start with a copy of the first object
+    // Iterate over the keys in the second object
+    for (const id in selectedArticles.value) {
+        if (displayArticles[id]) {
+            // If the ID exists in both objects, sum the amounts
+            displayArticles[id].amount += selectedArticles.value[id].amount;
+        } else {
+            // If the ID is unique to the second object, add it to the result
+            displayArticles[id] = { ...selectedArticles.value[id] };
+        }
+    }
+    return displayArticles;
+});
+
+
+const selectedArticles = ref({});
+const addArticleToSelected = (article) => {
+    let a = amount.value;
+    // if no amount is set => set amount to all
+    if (a === null) {
+        a = article.amount;
+    }
+    if (selectedArticles.value[article.id]) {
+        selectedArticles.value[article.id].amount += a;
+    } else {
+        selectedArticles.value[article.id] = { ...article, amount: a };
+    }
+    article.amount -= a;
+};
+const removeArticleFromSelected = (article) => {
+    articles.value[article.id].amount += article.amount;
+    selectedArticles.value[article.id].amount = 0;
+};
+
+
+
+
+// const activeArticleGroup = ref([]);
+// const articleGroups = ref([]);
+// const getArticleGroups = () => {
+//     let sourceStorageURL = "http://localhost:5000/api/storage_article_groups";
+//     // request mode
+//     // no source storage exists => get all article groups
+//     if (props.mode === "request") { }
+//     // get only article groups for articles in stock in specified storage
+//     else if (props.mode === "distribute" || props.mode === "transfer") {
+//         sourceStorageURL += `/${sourceStorage.value.id}`;
+//     }
+
+//     axios
+//         .get(sourceStorageURL)
+//         .then((response) => {
+//             articleGroups.value = response.data;
+//             activeArticleGroup.value = articleGroups.value[0];
+//         })
+//         .catch((error) => {
+//             console.log(error);
+//         });
+// };
+
+
+// const destStorageArticles = ref({});
+// const getArticlesInDestinationStorage = () => {
+//     let destinationStorageURL = `http://localhost:5000/api/get_articles_in_storage/${destinationStorage.value.id}`;
+//     // if (props.mode === "request") {
+//     //     destinationStorageURL += `/${sourceStorage}`;
+//     // } else if (props.mode === "distribute" || props.mode === "transfer") {
+//     //     destinationStorageURL += `/${destinationStorage}`;
+//     // }
+//     //destinationStorageURL += `/${destinationStorage.value.id}`;
+
+//     axios
+//         .get(destinationStorageURL)
+//         .then((response) => {
+//             response.data.forEach(art => {
+//                 destStorageArticles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
+//             })
+//         })
+//         .catch((error) => {
+//             console.log(error);
+//         });
+// };
+
+
+// const articles = ref([]);
+// const getArticlesInSourceStorage = () => {
+//     if (!activeArticleGroup.value) {
+//         articles.value = {};
+//         return;
+//     }
+//     let url = "";
+//     if (props.mode === "request") {
+//         url = `http://localhost:5000/api/storage_article_by_group/${activeArticleGroup.value[0]}`;
+//     } else if (props.mode === "distribute" || props.mode === "transfer" || props.mode === "stock") {
+//         url = `http://localhost:5000/api/get_articles_in_storage/${sourceStorage.value.id}/article_group/${activeArticleGroup.value[0]}`;
+//     }
+//     axios
+//         .get(url)
+//         .then((response) => {
+//             articles.value = {};
+//             response.data.forEach(art => {
+//                 articles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
+//             });
+//         })
+//         .catch((error) => {
+//             console.log(error);
+//         });
+// };
+// const watchEffect = () => {
+//     articles.value = {};
+//     getArticlesInSourceStorage();
+// };
+// watch(activeArticleGroup, watchEffect);
+
+
+const setInitInventory = () => {
+    let url = "";
+    url = `http://localhost:5000/api/set_init_inventory/storage/${sourceStorage.value.id}`;
+    axios
+        .get(url)
+        .then((response) => {
+            console.log(response);
+            showModal(t('message.init_stock_success'),
+                "",
+                { ok: true, cancel: false },
+            );
+        })
+        .catch((error) => {
+            console.log(error);
+            showModal(t('message.init_stock_error'),
+                error,
+                { ok: true, cancel: false },
+            );
+        });
+}
+
+
+const modalConf = ref({
+    buttons: {
+        ok: true,
+        cancel: true
+    },
+    title: "",
+    show: false,
+    callback: null
+});
+const showModal = (title, body, buttons, OKCallback, cancelCallback) => {
+    modalConf.value.title = title;
+
+    if (typeof body === 'string') {
+        modalConf.value.body = body;
+        modalConf.value.rawHTML = false;
+    } else if (typeof body === 'object' && body.hasOwnProperty('body') && body.hasOwnProperty('rawHTML')) {
+        modalConf.value.body = body.body;
+        modalConf.value.rawHTML = body.rawHTML;
+    } else {
+        modalConf.value.body = '';
+    }
+
+    modalConf.value.buttons = buttons;
+    if (buttons.ok) {
+        modalConf.value.OKCallback = () => {
+            modalConf.value.show = false;
+            if (OKCallback !== undefined) {
+                OKCallback();
+            }
+        }
+    }
+
+    if (buttons.cancel) {
+        modalConf.value.cancelCallback = () => {
+            modalConf.value.show = false;
+            if (cancelCallback !== undefined) {
+                cancelCallback();
+            }
+        }
+    }
+
+    modalConf.value.show = true;
+}
+
+
+const onInitClicked = () => {
+    showModal(t('message.init_stock'),
+        "",
+        { ok: true, cancel: true },
+        () => {
+            setInitInventory();
+        },
+    );
+}
+
+
+const onOKClicked = () => {
+    let title = "";
+
+    if (props.mode === "request") {
+        title = t('message.request_articles')
+    } else if (props.mode === "distribute") {
+        title = t('message.distribute_articles');
+    } else if (props.mode === "transfer") {
+        title = t('message.transfer_articles')
+    } else if (props.mode === "stock") {
+        title = t('message.transfer_articles')
+    }
+
+    let body = "";
+    body += "<table>";
+    for (const articleId in selectedArticles.value) {
+        const article = selectedArticles.value[articleId];
+        if (article.amount > 0) {
+            body += "<tr>";
+            body += `<td>${article.amount}</td>`;
+            body += `<td>${article.name}</td>`;
+            body += "</tr>";
+        }
+    }
+    body += "</table>";
+
+    showModal(title,
+        { body: body, rawHTML: true },
+        { ok: true, cancel: true },
+        () => {
+            putIntoStorage();
+        },
+    );
+}
+
+const showDestInventory = ref(false);
+const onShowDestInventorySwitchToggled = () => {
+    showDestInventory.value = !showDestInventory.value;;
+}
+watch(showDestInventory, getArticlesInDestinationStorage);
+
+
+const exit = (success) => {
+    let title = success ? t('message.success') : t('message.error');
+    let body = "";
+    let buttons = { ok: true, cancel: false };
+    let cb = () => {
+        window.setTimeout(() => {
+            try {
+                //window.close();
+            } catch (e) {
+                alert("Close window now");
+                window.location.reload();
+            }
+        }, 3000);
+    }
+    showModal(title, body, buttons, cb);
+}
+
+
+const putIntoStorage = () => {
+    let url = "http://localhost:5000//api/update_storage"
+    if (props.mode === "request") {
+        url += `/to/${destinationStorage.value.id}?method=absolute`;
+    } else if (props.mode === "distribute" ||
+        props.mode === "transfer" ||
+        props.mode === "stock") {
+        url += `/from/${sourceStorage.value.id}/to/${destinationStorage.value.id}?method=relative`;
+    }
+
+    let data = selectedArticles.value
+    axios
+        .post(url, data)
+        .then((response) => {
+            if (!response.data.success) {
+                console.log("Storage update did not succed")
+            } else {
+                console.log("Storage update succed")
+                selectedArticles.value = {};
+                exit(true);
+
+            }
+        })
+        .catch((error) => {
+            console.log("Storage update did not succed")
+            console.log(error);
+        });
+}
+
+
+const colorIsDarkSimple = (color) => {
+    color = (color.charAt(0) === '#') ? color.substring(1, 7) : color;
+    let r = parseInt(color.substring(0, 2), 16); // hexToR
+    let g = parseInt(color.substring(2, 4), 16); // hexToG
+    let b = parseInt(color.substring(4, 6), 16); // hexToB
+    return ((r * 0.299) + (g * 0.587) + (b * 0.114)) <= 186;
+}
+
+
+const stringToColor = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+        let value = (hash >> (i * 8)) & 0xff;
+        color += ('00' + value.toString(16)).slice(-2);
+    }
+    return { bg: color, fg: (colorIsDarkSimple(color) ? 'white' : 'black') };
+};
+
+// const main = () => {
+    //getArticleGroups();
+   //getArticlesInDestinationStorage()
+// }
+// main();
+
+</script>
+
+<template>
+    <ModalDialog :title="modalConf.title" :show="modalConf.show" :buttons="modalConf.buttons" @ok="modalConf.OKCallback"
+        @cancel="modalConf.cancelCallback">
+        <p v-if="modalConf.rawHTML === false">{{ modalConf.body }}</p>
+        <span v-else v-html="modalConf.body"></span>
+    </ModalDialog>
+
+    <header class="header">
+        <h1 class="left">{{ sourceStorage.name }} -> {{ destinationStorage.name }}</h1>
+        <a class="button left"
+            :href="`?terminal=${$terminalConfig.name}&sourceStorageId=${destinationStorage.id}&destinationStorageId=${sourceStorage.id}`">⇄</a>
+        <button class="button right" v-if="props.mode === 'stock'" @click="onInitClicked">Init</button>
+        <button class="button" @click="exit(true)">Quit</button>
+    </header>
+
+    <div class="amount-selector">
+        <button class="article-amount" @click="decrement">-</button>
+        <input class="article-amount" type="text" :value="amount ? amount : $t('message.all')">
+        <button class="article-amount" @click="increment">+</button>
+        <button class="article-amount" :class="[_amount === 1 ? 'active' : '']" @click="_amount = 1">x1</button>
+        <button class="article-amount" :class="[_amount === 6 ? 'active' : '']" @click="_amount = 6">x6</button>
+        <button class="article-amount" :class="[_amount === 10 ? 'active' : '']" @click="_amount = 10">x10</button>
+        <button class="article-amount" :class="[_amount === 12 ? 'active' : '']" @click="_amount = 12">x12</button>
+        <button class="article-amount" :class="[_amount === 24 ? 'active' : '']" @click="_amount = 24">x24</button>
+        <button class="article-amount" :class="[_amount === null ? 'active' : '']" @click="_amount = null">Alle</button>
+        <button class="confirm" @click="onOKClicked">OK</button>
+    </div>
+
+    <div class="three-columns-grid">
+        <div class="">
+            <button class="article-group" v-for="group in articleGroups" @click="activeArticleGroup = group"
+                :style="{ backgroundColor: stringToColor(group[1]).bg, color: stringToColor(group[1]).fg }">{{ group[1]
+                }}</button>
+        </div>
+
+        <div class="">
+            <template v-for="article in articles">
+                <div class="article-button">
+                    <button class="article" @click="addArticleToSelected(article)"
+                        :style="{ backgroundColor: stringToColor(activeArticleGroup[1]).bg, color: stringToColor(activeArticleGroup[1]).fg }">
+                        {{ article.name }}
+                    </button>
+                    <p>{{ article.amount ? article.amount : '-' }}</p>
+                </div>
+            </template>
+        </div>
+
+        <div class="right-col">
+            <ArticleList :articles="destDisplayArticles" @article-removed="removeArticleFromSelected"></ArticleList>
+            <div class="dest-storage-switch">
+                <ToggleSwitch :checked="showDestInventory" @toggled="onShowDestInventorySwitchToggled"></ToggleSwitch>
+            </div>
+        </div>
+
+    </div>
+</template>
+
+<style lang="scss" scoped>
+.header {
+    display: flex;
+    /* justify-content: space-between; */
+    align-items: center;
+
+    .button {
+        font-size: 200%;
+        padding: 0;
+    }
+
+    /* .left {} */
+
+    .right {
+        margin-left: auto;
+    }
+}
+
+.amount-selector {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.three-columns-grid {
+    overflow: hidden;
+    height: 100%;
+}
+
+.three-columns-grid>* {
+    height: 100%;
+    overflow: scroll;
+}
+
+div.article-button {
+    display: inline-block;
+
+    p {
+        text-align: center;
+    }
+}
+
+button.article,
+button.article-group {
+    width: 5em;
+    white-space: normal;
+    word-break: break-all;
+    height: 3lh;
+    padding: 0.5em;
+    overflow: hidden;
+    vertical-align: top;
+    /* needed to align buttons when text overflows */
+}
+
+input.article-amount {
+    max-width: 2em;
+    font-size: 2em;
+}
+
+button.article-amount {
+    width: 3em;
+    padding: 0.5em 0;
+    font-size: 1.5em;
+}
+
+button.confirm {
+    margin-left: auto;
+}
+
+
+.right-col:deep() .article-list-container {
+    height: calc(100% - 4rem);
+    width: 100%;
+    overflow: scroll;
+
+    table {
+        tr:nth-child(odd) {
+            background-color: color.scale($light-button-background, $lightness: -30%);
+            ;
+        }
+
+        .name {
+            word-break: break-all;
+        }
+    }
+}
+
+.dest-storage-switch {
+    padding: 0.5rem;
+}
+
+</style>

@@ -1,0 +1,24 @@
+[database]
+# Define your connection parameters
+server = "192.168.2.50:1433\\wiffzack"
+database = "wiffzack"
+username = "wiffzack"
+password = "wiffzack"
+
+[server]
+host = "localhost:5000"
+init_stock_directory = "assets/init/"
+
+
+
+[terminal_config]
+
+[terminal_config.lager]
+name = "lager"
+storage_id = 0
+
+[terminal_config.bar1]
+name = "bar1"
+request_storage_id = 1
+transfer_storage_id = 2
+storage_id = 3

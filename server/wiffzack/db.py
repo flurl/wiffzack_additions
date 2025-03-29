@@ -1,0 +1,205 @@
+from typing import Any, LiteralString, NoReturn
+import pymssql
+import threading
+import queue
+
+from .types import Article, StorageModifier, QueryQueueItem, ResultQueueItem
+
+
+class Database:
+    def __init__(self) -> None:
+        self.query_queue: queue.Queue[QueryQueueItem] = queue.Queue()
+        self.connection: pymssql.Connection | None = None
+        self.cursor: pymssql.Cursor | None = None
+        self.worker_thread = threading.Thread(target=self._query_worker, daemon=True)
+        self.worker_thread.start()
+
+    def connect_to_database(self, server: str, username: str, password: str, database: str) -> None:
+        self.connection = pymssql.connect(server=server, user=username,
+                                            password=password, database=database, tds_version=r"7.0")
+        self.cursor = self.connection.cursor()
+
+    def _query_worker(self) -> NoReturn:
+        """Worker thread to process queries sequentially."""
+        while True:
+            qqi: QueryQueueItem = self.query_queue.get()
+            query: LiteralString = qqi.query
+            params: tuple[Any, ...] = qqi.params
+            result_queue: queue.Queue[ResultQueueItem] = qqi.result_queue
+            assert self.cursor is not None, "Cursor is not initialized."
+            try:
+                self.cursor.execute(query, params)
+                try:
+                    result: list[tuple[Any, ...]] | None = self.cursor.fetchall()
+                except pymssql.OperationalError:
+                    # Statement not executed or executed statement has no resultset
+                    result = None
+                result_queue.put(ResultQueueItem(result))
+            except Exception as e:
+                print(f"Error executing query: {e}")
+                result_queue.put(ResultQueueItem(None))  # Signal error
+            finally:
+                self.query_queue.task_done()
+
+    def execute_query(self, query: LiteralString, params: tuple[Any, ...] = ()) -> list[tuple[Any, ...]] | None:
+        """Executes a SQL query and returns the result, using the query queue."""
+        local_result_queue: queue.Queue[ResultQueueItem] = queue.Queue()
+        self.query_queue.put(QueryQueueItem(query, params, local_result_queue))
+        result: ResultQueueItem = local_result_queue.get()
+        if result.result is None:
+            print(f"Error: Query result is None for query: {query}")
+        return result.result
+
+    def commit(self) -> None:
+        assert self.connection is not None, "Connection is not initialized."
+        self.connection.commit()
+
+    def rollback(self) -> None:
+        assert self.connection is not None, "Connection is not initialized."
+        self.connection.rollback()
+
+    def update_storage(self, sm: StorageModifier, absolute: bool=False) -> None:
+        storage_id: int = sm.storage_id
+        amount: int = sm.amount
+        article: Article = sm.article
+        try:
+            # get the lager artikel
+            query: LiteralString = f"""select top 1 * from internal_lager_artikel_by_priority(%s)"""
+            result: list[tuple[Any, ...]] | None = self.execute_query(query, (article.id,))
+            if result is None or len(result) == 0:
+                raise LookupError(
+                    f"No storage article id found for article {article.id}.")
+            storage_article_id: int = result[0][0]
+
+            # check if the lagerdetail (=lagerstand) already exists
+            # if not, create it
+            query: LiteralString = """select count(*) from lager_details 
+                where lager_detail_lager = %s and 
+                lager_detail_artikel = %s"""
+            result: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id, storage_article_id))
+            if result is None or len(result) == 0:
+                raise LookupError(f"Error for query {query}.")
+            count: int = result[0][0]
+            if count == 0:
+                query: LiteralString = f"""exec insert_lagerdetail %s, %s, %s, %s, %s"""
+                self.execute_query(
+                    query, (storage_id, storage_article_id, 0, 0, 0))
+                
+            # if we set the absolute value, first set the stock value to 0
+            if absolute:
+                query: LiteralString = f"""update lager_details set lager_detail_istStand = 0 where lager_detail_lager = %s and lager_detail_artikel = %s"""
+                self.execute_query(query, (storage_id, storage_article_id))
+            
+            query: LiteralString = f"""exec lager_update_stand %s, %s, %s"""
+            self.execute_query(
+                query,  (article.id, storage_id, amount))
+        except Exception as e:
+            self.rollback()
+            print(e)
+            raise e
+        self.commit()
+
+    def add_article_to_storage(self, sm: StorageModifier, absolute: bool=False) -> None:
+        if sm.amount < 0:
+            raise ValueError
+        self.update_storage(sm, absolute)
+
+    def withdraw_article_from_storage(self, sm: StorageModifier, absolute: bool=False) -> None:
+        if sm.amount < 0:
+            raise ValueError
+        self.update_storage(sm._replace(amount=-sm.amount), absolute)
+
+    def get_all_storage_article_groups(self) -> list[tuple[Any, ...]] | None:
+        query: LiteralString = f"""
+            select distinct artikel_gruppe_id, artikel_gruppe_name 
+            from lager_artikel, artikel_basis, artikel_gruppen
+            where 1=1
+            and lager_artikel_artikel = artikel_id
+            and artikel_gruppe = artikel_gruppe_id
+        """
+        rows: list[tuple[Any, ...]] | None = self.execute_query(query)
+        return rows
+
+    def get_all_storage_articles(self) -> list[tuple[Any, ...]] | None:
+        query: LiteralString = f"""select * from lager_artikel"""
+        rows: list[tuple[Any, ...]] | None = self.execute_query(query)
+        return rows
+
+    def get_storage_articles_in_storage(self, storage_id: int) -> list[tuple[Any, ...]] | None:
+        """Retrieves all articles found in a specific storage.
+
+        This method queries the database to find all articles that are present
+        in the specified storage. It returns a list of tuples, where each tuple
+        contains the article ID, article name, and the current stock level
+        (lager_detail_istStand) for that article in the storage.
+
+        Args:
+            storage_id (int): The ID of the storage to query.
+
+        Returns:
+            list[tuple[Any, ...]] | None: A list of tuples, where each tuple
+            contains (artikel_id, artikel_bezeichnung, lager_detail_istStand).
+        """
+
+        query: LiteralString = f"""
+            select artikel_id, artikel_bezeichnung, lager_detail_istStand
+            from artikel_basis, lager_artikel, lager_details
+            where 1=1
+            and artikel_id = lager_artikel_artikel
+            and lager_detail_lager = %s
+            and lager_detail_artikel = lager_artikel_lagerartikel
+            and lager_detail_istStand > 0
+        """
+        rows: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id,))
+        return rows
+
+    def get_article_groups_in_storage(self, storage_id: int) -> list[tuple[Any, ...]] | None:
+        """Retrieves all article groups for articles found in a specific storage.
+
+        This method queries the database to find all distinct article groups
+        associated with articles that are present in the specified storage.
+
+        Args:
+            storage_id (int): The ID of the storage to query.
+
+        Returns:
+            list[tuple[Any, ...]] | None: A list of tuples, where each tuple contains the article group ID and name. Returns None if no data is found or an error occurs.
+        """
+
+        query: LiteralString = f"""
+            select distinct artikel_gruppe_id, artikel_gruppe_name 
+            from lager_artikel, artikel_basis, artikel_gruppen, lager_details
+            where 1=1
+            and lager_artikel_artikel = artikel_id 
+            and artikel_gruppe = artikel_gruppe_id 
+            and lager_detail_artikel = lager_artikel_lagerartikel 
+            and lager_detail_lager = %s
+            and lager_detail_istStand > 0
+        """
+        rows: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id,))
+        return rows
+
+    def get_articles_in_storage(self, storage_id: int, article_group_id: int | None = None) -> list[tuple[Any, ...]] | None:
+        query: LiteralString = f"""
+            select artikel_id, artikel_bezeichnung, lager_detail_istStand
+            from artikel_basis, lager_artikel, lager_details
+            where 1=1
+            and artikel_id = lager_artikel_artikel
+            and lager_detail_artikel = lager_artikel_lagerartikel
+            and lager_detail_lager = %s
+        """
+        params: tuple[int, ...] = (storage_id,)
+        if article_group_id is not None:
+            query += f" and artikel_gruppe = %s"
+            params = (storage_id, article_group_id)
+            
+        rows: list[tuple[Any, ...]] | None = self.execute_query(query, params)
+        return rows
+    
+    def get_storage_name(self, storage_id: int) -> list[tuple[Any, ...]] | None:
+        query: LiteralString = f"""select lager_bezeichnung from lager_basis where lager_id = %s"""
+        rows: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id,))
+        return rows
+
+
+db: Database = Database()

@@ -1,0 +1,116 @@
+/* Box sizing rules */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Remove default margin */
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+/* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+}
+
+/* Set core root defaults */
+html:focus-within {
+  scroll-behavior: smooth;
+}
+
+/* Set core body defaults */
+body {
+  // min-height: 100vh;
+  background-color: $light-background;
+  color: $light-text;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Base styles for all buttons */
+.button, 
+button {
+  background-color: $light-button-background; /* Example color, adjust as needed */
+  border: $light-border;
+  color: $light-button-text;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 5px; /* Add some rounding for a softer look */
+  transition: background-color 0.3s ease; /* Smooth transition for hover/active */
+
+  /* Important for touch devices: increase tap target size */
+  padding: 20px 40px; /* Adjust padding for larger tap area */
+  min-width: 4rem; /* Ensure sufficient width */
+
+
+  /* Hover and active states */
+  &:hover {
+    background-color: color.scale($light-button-background, $lightness: -10%); /* Darker shade on hover */
+  }
+
+  &:active {
+    background-color: color.scale($light-button-background, $lightness: -30%); /* Even darker shade when pressed */
+    transform: translateY(2px);
+  }
+
+  /* Optional: Disabled state */
+  &:disabled {
+    background-color: #ccc;
+    cursor: default;
+  }
+
+  /* Consider adding these for different button styles */
+  &.confirm {
+    background-color: $light-confirm; 
+  }
+
+  &.cancel {
+    background-color: $light-cancel;
+  }
+
+  &.active {
+    background-color: color.scale($light-button-background, $lightness: -30%);
+  }
+
+}
+.button-outline {
+  background-color: transparent;
+  border: 2px solid #4CAF50; /* Green border */
+  color: #4CAF50;
+}
+
+
+/* container */
+.three-columns-grid {
+  display: grid;
+  grid-auto-rows: 1fr;
+  grid-template-columns: 1fr 3fr 1fr;
+}
+
+/* columns */
+.three-columns-grid > * {
+  border: 1px dashed black;
+  position: relative;
+}
