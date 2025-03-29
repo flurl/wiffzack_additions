@@ -119,7 +119,7 @@ const addArticleToSelected = (article) => {
     article.amount -= a;
 };
 const removeArticleFromSelected = (article) => {
-    articles.value[article.id].amount += article.amount;
+    articles.value[article.id].amount += selectedArticles.value[article.id].amount;
     selectedArticles.value[article.id].amount = 0;
 };
 
