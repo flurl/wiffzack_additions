@@ -66,6 +66,7 @@ watch(activeArticleGroup, getArticlesInSourceStorage);
 
 const _amount = ref(1);
 if (props.mode === "distribute" || props.mode === "transfer") {
+    // null is the value for amount equals all articles in source storage
     _amount.value = null;
 }
 const increment = () => {
@@ -133,9 +134,19 @@ const modalConf = ref({
     show: false,
     callback: null
 });
+/**
+ * Displays a modal dialog with the given title, body, and buttons.
+ *
+ * @param {string} title - The title of the modal.
+ * @param {string|object} body - The body content of the modal. Can be a string or an object with 'body' and 'rawHTML' properties.
+ * @param {object} buttons - An object specifying which buttons to show (e.g., { ok: true, cancel: true }).
+ * @param {function} OKCallback - The callback function to execute when the OK button is clicked.
+ * @param {function} cancelCallback - The callback function to execute when the Cancel button is clicked.
+ */
 const showModal = (title, body, buttons, OKCallback, cancelCallback) => {
     modalConf.value.title = title;
 
+    // when rawHTML is set, the modal's body will not be cleaned
     if (typeof body === 'string') {
         modalConf.value.body = body;
         modalConf.value.rawHTML = false;
@@ -169,6 +180,7 @@ const showModal = (title, body, buttons, OKCallback, cancelCallback) => {
 }
 
 
+// sets the initial inventory for the current source storage
 const onInitClicked = () => {
     showModal(t('message.init_stock'),
         "",
@@ -190,6 +202,8 @@ const onInitClicked = () => {
 }
 
 
+// transfer the selected articles (if any) to the destination storage
+// and close the window after the modal is closed
 const onOKClicked = () => {
     let title = "";
 
