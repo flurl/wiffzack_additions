@@ -114,6 +114,29 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         }
     }
 
+    const setInitInventory = async () => {
+        loading.value = true;
+        error.value = null;
+        let url = "";
+        url = `http://localhost:5000/api/set_init_inventory/storage/${sourceStorage.value.id}`;
+
+        try {
+            const response = await axios.get(url);
+            console.log(response);
+        } catch (err) {
+            console.log(err);
+            error.value = err;
+        } finally {
+            loading.value = false;
+        }
+
+        if (error.value) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
     onMounted(async () => {
         if (sourceStorage.value.id) {
             await getStorageName(sourceStorage, sourceStorage.value.id);
@@ -138,6 +161,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         getArticlesInDestinationStorage,
         getArticlesInSourceStorage,
         putIntoStorage,
+        setInitInventory,
         loading,
         error
     };

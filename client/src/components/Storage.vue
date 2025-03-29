@@ -57,6 +57,7 @@ const {
     getArticlesInDestinationStorage,
     getArticlesInSourceStorage,
     putIntoStorage,
+    setInitInventory,
     loading,
     error
 } = useStorageData(sourceStorageId, destinationStorageId, props.mode);
@@ -123,28 +124,6 @@ const removeArticleFromSelected = (article) => {
 };
 
 
-const setInitInventory = () => {
-    let url = "";
-    url = `http://localhost:5000/api/set_init_inventory/storage/${sourceStorage.value.id}`;
-    axios
-        .get(url)
-        .then((response) => {
-            console.log(response);
-            showModal(t('message.init_stock_success'),
-                "",
-                { ok: true, cancel: false },
-            );
-        })
-        .catch((error) => {
-            console.log(error);
-            showModal(t('message.init_stock_error'),
-                error,
-                { ok: true, cancel: false },
-            );
-        });
-}
-
-
 const modalConf = ref({
     buttons: {
         ok: true,
@@ -194,8 +173,18 @@ const onInitClicked = () => {
     showModal(t('message.init_stock'),
         "",
         { ok: true, cancel: true },
-        () => {
-            setInitInventory();
+        async () => {
+            if (await setInitInventory()) {
+                showModal(t('message.init_stock_success'),
+                "",
+                { ok: true, cancel: false },
+            );
+            } else {
+                showModal(t('message.init_stock_error'),
+                    error.value,
+                    { ok: true, cancel: false },
+                );
+            };
         },
     );
 }
