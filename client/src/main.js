@@ -62,6 +62,10 @@ library.add(fas)
 
 const app = createApp(App)
 
+const config = {backendHost: 'http://localhost:5000'};
+app.provide('config', config);
+
+
 app.use(router)
 app.use(i18n)
 app.component('font-awesome-icon', FontAwesomeIcon)
@@ -73,7 +77,7 @@ const destTerminal = urlParams.get('destTerminal');
 
 const fetchConfig = async (terminalId) => {
   try {
-    const response = await axios.get(`http://localhost:5000/api/get_config/${terminalId}`);
+    const response = await axios.get(`${config.backendHost}/api/get_config/${terminalId}`);
     return response.data.config;
   } catch (error) {
     console.error(`Error fetching config for terminal ${terminalId}:`, error);

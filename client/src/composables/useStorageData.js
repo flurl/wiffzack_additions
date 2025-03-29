@@ -1,8 +1,9 @@
 // useStorageData.js
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import axios from 'axios';
 
 export function useStorageData(sourceStorageId, destinationStorageId, mode) {
+    const config = inject('config');
     const sourceStorage = ref({ id: sourceStorageId, name: null });
     const destinationStorage = ref({ id: destinationStorageId, name: null });
     const articles = ref({});
@@ -15,7 +16,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
 
     const getStorageName = async (storage, storageId) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/get_storage_name/${storageId}`);
+            const response = await axios.get(`${config.backendHost}/api/get_storage_name/${storageId}`);
             storage.value.name = response.data[0][0];
         } catch (err) {
             error.value = err;
@@ -25,7 +26,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
     const getArticleGroups = async () => {
         loading.value = true;
         error.value = null;
-        let sourceStorageURL = "http://localhost:5000/api/storage_article_groups";
+        let sourceStorageURL = `${config.backendHost}/api/storage_article_groups`;
         if (mode === "distribute" || mode === "transfer") {
             sourceStorageURL += `/${sourceStorage.value.id}`;
         }
@@ -44,7 +45,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         loading.value = true;
         error.value = null;
         try {
-            const response = await axios.get(`http://localhost:5000/api/get_articles_in_storage/${destinationStorage.value.id}`);
+            const response = await axios.get(`${config.backendHost}/api/get_articles_in_storage/${destinationStorage.value.id}`);
             response.data.forEach(art => {
                 destStorageArticles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
             });
@@ -64,10 +65,10 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         error.value = null;
         let url = "";
         if (mode === "request") {
-            url = `http://localhost:5000/api/storage_article_by_group/${activeArticleGroup.value[0]}`;
+            url = `${config.backendHost}/api/storage_article_by_group/${activeArticleGroup.value[0]}`;
         } else if (mode === "distribute" || mode === "transfer" || mode === "stock") {
-            url = `http://localhost:5000/api/get_articles_in_storage/${sourceStorage.value.id}/article_group/${activeArticleGroup.value[0]}`;
-        }
+            url = `${config.backendHost}/api/get_articles_in_storage/${sourceStorage.value.id}/article_group/${activeArticleGroup.value[0]}`;
+        } 
         try {
             const response = await axios.get(url);
             articles.value = {};
@@ -84,7 +85,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
     const putIntoStorage = async () => {
         loading.value = true;
         error.value = null;
-        let url = "http://localhost:5000//api/update_storage"
+        let url = `${config.backendHost}/api/update_storage`
         if (mode === "request") {
             url += `/to/${destinationStorage.value.id}?method=absolute`;
         } else if (mode === "distribute" ||
@@ -118,7 +119,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         loading.value = true;
         error.value = null;
         let url = "";
-        url = `http://localhost:5000/api/set_init_inventory/storage/${sourceStorage.value.id}`;
+        url = `${config.backendHost}/api/set_init_inventory/storage/${sourceStorage.value.id}`;
 
         try {
             const response = await axios.get(url);
