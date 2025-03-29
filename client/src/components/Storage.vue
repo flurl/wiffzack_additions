@@ -6,8 +6,6 @@ import ModalDialog from './ModalDialog.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 import { useStorageData } from '../composables/useStorageData';
 
-
-
 import axios from 'axios';
 
 const { t } = useI18n()
@@ -24,10 +22,6 @@ const props = defineProps({
 });
 
 
-
-
-// const sourceStorage = ref({ id: null, name: null });
-// const destinationStorage = ref({ id: null, name: null })
 let sourceStorageId = null;
 let destinationStorageId = null;
 if (props.mode === "request") {
@@ -48,12 +42,6 @@ const urlParams = new URLSearchParams(window.location.search);
 sourceStorageId = urlParams.has('sourceStorageId') ? urlParams.get('sourceStorageId') : null;
 destinationStorageId = urlParams.has('destinationStorageId') ? urlParams.get('destinationStorageId') : null;
 
-// if (sourceStorageId) {
-//     sourceStorage.value.id = sourceStorageId;
-// }
-// if (destinationStorageId) {
-//     destinationStorage.value.id = destinationStorageId;
-// }
 
 const {
     sourceStorage,
@@ -62,39 +50,14 @@ const {
     articleGroups,
     destStorageArticles,
     activeArticleGroup,
-    // getArticleGroups,
+    selectedArticles,
     getArticlesInDestinationStorage,
     getArticlesInSourceStorage,
+    putIntoStorage,
     loading,
     error
 } = useStorageData(sourceStorageId, destinationStorageId, props.mode);
-
 watch(activeArticleGroup, getArticlesInSourceStorage);
-
-
-
-// if (sourceStorage.value.id) {
-//     let url = `http://localhost:5000/api/get_storage_name/${sourceStorage.value.id}`;
-//     axios
-//         .get(url)
-//         .then((response) => {
-//             sourceStorage.value.name = response.data[0][0];
-//         })
-//         .catch((error) => {
-//             console.log(error);
-//         });
-// }
-// if (destinationStorage.value.id) {
-//     let url = `http://localhost:5000/api/get_storage_name/${destinationStorage.value.id}`;
-//     axios
-//         .get(url)
-//         .then((response) => {
-//             destinationStorage.value.name = response.data[0][0];
-//         })
-//         .catch((error) => {
-//             console.log(error);
-//         });
-// }
 
 
 const _amount = ref(1);
@@ -117,6 +80,7 @@ const amount = computed(() => {
     return _amount.value;
 });
 
+
 const destDisplayArticles = computed(() => {
     if (!showDestInventory.value) {
         return selectedArticles.value;
@@ -137,7 +101,6 @@ const destDisplayArticles = computed(() => {
 });
 
 
-const selectedArticles = ref({});
 const addArticleToSelected = (article) => {
     let a = amount.value;
     // if no amount is set => set amount to all
@@ -155,86 +118,6 @@ const removeArticleFromSelected = (article) => {
     articles.value[article.id].amount += article.amount;
     selectedArticles.value[article.id].amount = 0;
 };
-
-
-
-
-// const activeArticleGroup = ref([]);
-// const articleGroups = ref([]);
-// const getArticleGroups = () => {
-//     let sourceStorageURL = "http://localhost:5000/api/storage_article_groups";
-//     // request mode
-//     // no source storage exists => get all article groups
-//     if (props.mode === "request") { }
-//     // get only article groups for articles in stock in specified storage
-//     else if (props.mode === "distribute" || props.mode === "transfer") {
-//         sourceStorageURL += `/${sourceStorage.value.id}`;
-//     }
-
-//     axios
-//         .get(sourceStorageURL)
-//         .then((response) => {
-//             articleGroups.value = response.data;
-//             activeArticleGroup.value = articleGroups.value[0];
-//         })
-//         .catch((error) => {
-//             console.log(error);
-//         });
-// };
-
-
-// const destStorageArticles = ref({});
-// const getArticlesInDestinationStorage = () => {
-//     let destinationStorageURL = `http://localhost:5000/api/get_articles_in_storage/${destinationStorage.value.id}`;
-//     // if (props.mode === "request") {
-//     //     destinationStorageURL += `/${sourceStorage}`;
-//     // } else if (props.mode === "distribute" || props.mode === "transfer") {
-//     //     destinationStorageURL += `/${destinationStorage}`;
-//     // }
-//     //destinationStorageURL += `/${destinationStorage.value.id}`;
-
-//     axios
-//         .get(destinationStorageURL)
-//         .then((response) => {
-//             response.data.forEach(art => {
-//                 destStorageArticles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
-//             })
-//         })
-//         .catch((error) => {
-//             console.log(error);
-//         });
-// };
-
-
-// const articles = ref([]);
-// const getArticlesInSourceStorage = () => {
-//     if (!activeArticleGroup.value) {
-//         articles.value = {};
-//         return;
-//     }
-//     let url = "";
-//     if (props.mode === "request") {
-//         url = `http://localhost:5000/api/storage_article_by_group/${activeArticleGroup.value[0]}`;
-//     } else if (props.mode === "distribute" || props.mode === "transfer" || props.mode === "stock") {
-//         url = `http://localhost:5000/api/get_articles_in_storage/${sourceStorage.value.id}/article_group/${activeArticleGroup.value[0]}`;
-//     }
-//     axios
-//         .get(url)
-//         .then((response) => {
-//             articles.value = {};
-//             response.data.forEach(art => {
-//                 articles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
-//             });
-//         })
-//         .catch((error) => {
-//             console.log(error);
-//         });
-// };
-// const watchEffect = () => {
-//     articles.value = {};
-//     getArticlesInSourceStorage();
-// };
-// watch(activeArticleGroup, watchEffect);
 
 
 const setInitInventory = () => {
@@ -344,11 +227,12 @@ const onOKClicked = () => {
     showModal(title,
         { body: body, rawHTML: true },
         { ok: true, cancel: true },
-        () => {
-            putIntoStorage();
+        async () => {
+            exit(await putIntoStorage());
         },
     );
 }
+
 
 const showDestInventory = ref(false);
 const onShowDestInventorySwitchToggled = () => {
@@ -372,36 +256,6 @@ const exit = (success) => {
         }, 3000);
     }
     showModal(title, body, buttons, cb);
-}
-
-
-const putIntoStorage = () => {
-    let url = "http://localhost:5000//api/update_storage"
-    if (props.mode === "request") {
-        url += `/to/${destinationStorage.value.id}?method=absolute`;
-    } else if (props.mode === "distribute" ||
-        props.mode === "transfer" ||
-        props.mode === "stock") {
-        url += `/from/${sourceStorage.value.id}/to/${destinationStorage.value.id}?method=relative`;
-    }
-
-    let data = selectedArticles.value
-    axios
-        .post(url, data)
-        .then((response) => {
-            if (!response.data.success) {
-                console.log("Storage update did not succed")
-            } else {
-                console.log("Storage update succed")
-                selectedArticles.value = {};
-                exit(true);
-
-            }
-        })
-        .catch((error) => {
-            console.log("Storage update did not succed")
-            console.log(error);
-        });
 }
 
 

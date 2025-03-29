@@ -9,6 +9,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
     const articleGroups = ref([]);
     const destStorageArticles = ref({});
     const activeArticleGroup = ref(null);
+    const selectedArticles = ref({});
     const loading = ref(false);
     const error = ref(null);
 
@@ -80,6 +81,39 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         }
     };
 
+    const putIntoStorage = async () => {
+        loading.value = true;
+        error.value = null;
+        let url = "http://localhost:5000//api/update_storage"
+        if (mode === "request") {
+            url += `/to/${destinationStorage.value.id}?method=absolute`;
+        } else if (mode === "distribute" ||
+            mode === "transfer" ||
+            mode === "stock") {
+            url += `/from/${sourceStorage.value.id}/to/${destinationStorage.value.id}?method=relative`;
+        }
+    
+        let data = selectedArticles.value
+
+        try {
+            const response = await axios.post(url, data);
+            if (response.data.success) {
+                console.log("Storage update succeded")
+                selectedArticles.value = {};
+                loading.value = false;
+                return true;
+            } else {
+                console.log("Storage update did not succeded")
+                loading.value = false;
+                return false;
+            }
+        } catch (err) {
+            error.value = err;
+        } finally {
+            loading.value = false;
+        }
+    }
+
     onMounted(async () => {
         if (sourceStorage.value.id) {
             await getStorageName(sourceStorage, sourceStorage.value.id);
@@ -99,9 +133,11 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         articleGroups,
         destStorageArticles,
         activeArticleGroup,
+        selectedArticles,
         // getArticleGroups,
         getArticlesInDestinationStorage,
         getArticlesInSourceStorage,
+        putIntoStorage,
         loading,
         error
     };
