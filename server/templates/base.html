@@ -3,10 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Wiffzack Additions</title>
+    <link rel="stylesheet" href="/static/main.css">
 </head>
 <body>
-    <div class="content">
-        {% block content %} {% endblock %}
+    <div class="main-wrapper">
+        <div class="content">
+            {% if heading %}
+                <h1>{{ heading }}</h1>
+            {% endif %}
+            {% block content %} {% endblock %}
+        </div>
+        <div class="footer" >
+            <button id="closeButton">Close</button>
+        </div>    
     </div>
+    <script>
+        document.getElementById("closeButton").addEventListener("click", function() {
+            window.close();
+        });
+    </script>
 </body>
 </html>

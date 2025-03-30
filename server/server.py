@@ -5,7 +5,6 @@ from typing import Any, LiteralString
 import tomllib
 import csv
 
-
 from flask import Flask, jsonify, make_response, render_template, request
 from flask_cors import CORS
 from werkzeug.wrappers import Response
@@ -32,8 +31,8 @@ app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
 
 
-@app.route('/api/sales/<string:kellner_name>', methods=['GET'])
-def get_sales(kellner_name: str) -> Response:
+@app.route('/api/sales/<string:client>', methods=['GET'])
+def get_sales(client: str) -> Response:
     """
     Retrieve total sales for a specific waiter from the database.
 
@@ -43,7 +42,7 @@ def get_sales(kellner_name: str) -> Response:
     database.
 
     Parameters:
-    - kellner_name (str): The short name of the waiter to filter 
+    - client (str): The short name of the client to filter 
       sales data.
 
     Returns:
@@ -63,8 +62,8 @@ def get_sales(kellner_name: str) -> Response:
     """
 
     rows: DBResult = wz.db.execute_query(
-        query, (f'%{kellner_name}%',))
-    return mk_response(rows)
+        query, (f'%{client}%',))
+    return mk_response(rows, "sales")
 
 
 @app.route('/api/artikel', methods=['GET'])
@@ -198,14 +197,15 @@ def wants_json_response() -> bool:
         request.accept_mimetypes['text/html']
 
 
-def mk_response(data: DBResult) -> Response:
+def mk_response(data: DBResult, heading: str|None = None) -> Response:
+    print(heading)
     # Check the Accept header
     if wants_json_response():
         # Return the data as JSON
         return jsonify(data)
     else:
         # Return the data as an HTML table
-        return make_response(render_template('data_table.html', data=data))
+        return make_response(render_template('data_table.html', data=data, heading=heading))
 
 
 if __name__ == '__main__':
