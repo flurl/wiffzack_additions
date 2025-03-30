@@ -42,8 +42,8 @@ if (props.mode === "request") {
 }
 // check if the source and/or destination storage is overwritten manually
 const urlParams = new URLSearchParams(window.location.search);
-sourceStorageId = urlParams.has('sourceStorageId') ? urlParams.get('sourceStorageId') : null;
-destinationStorageId = urlParams.has('destinationStorageId') ? urlParams.get('destinationStorageId') : null;
+sourceStorageId = urlParams.has('sourceStorageId') ? urlParams.get('sourceStorageId') : sourceStorageId;
+destinationStorageId = urlParams.has('destinationStorageId') ? urlParams.get('destinationStorageId') : destinationStorageId;
 
 
 const {
