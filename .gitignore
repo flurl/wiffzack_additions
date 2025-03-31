@@ -29,7 +29,12 @@ coverage
 
 *.tsbuildinfo
 
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+
 venv*
 typings
 server/assets/init/*.csv
-*.pyc
+
