@@ -128,7 +128,7 @@ class Database:
         query: LiteralString = f"""select * from lager_artikel"""
         rows: list[tuple[Any, ...]] | None = self.execute_query(query)
         return rows
-    
+
     def get_storage_articles_by_group(self, article_group_id: int) -> DBResult:
         query: LiteralString = f"""
             select artikel_id, artikel_bezeichnung
@@ -139,8 +139,6 @@ class Database:
         """
         rows: DBResult = self.execute_query(query, (article_group_id,))
         return rows
-    
-
 
     def get_storage_articles_in_storage(self, storage_id: int) -> list[tuple[Any, ...]] | None:
         """Retrieves all articles found in a specific storage.
@@ -233,7 +231,11 @@ class Database:
         """
         rows: DBResult = self.execute_query(query, (client,))
         return rows
-    
+
+    """********************
+    ** SALES
+    ********************"""
+
     def get_tallied_articles(self, client: str) -> DBResult:
         query: LiteralString = f"""
             select sum(tisch_bondetail_absmenge), artikel_bezeichnung 
@@ -252,7 +254,7 @@ class Database:
         """
         rows: DBResult = self.execute_query(query, (client,))
         return rows
-    
+
     def get_latest_tallied_articles(self, client: str) -> DBResult:
         query: LiteralString = f"""
             select top 10 kellner_kurzName, tisch_bondetail_absmenge, artikel_bezeichnung \
@@ -266,7 +268,7 @@ class Database:
         """
         rows: DBResult = self.execute_query(query, (f'%{client}%',))
         return rows
-        
+
     def get_wardrobe_sales(self) -> DBResult:
         query: LiteralString = f"""
             select kellner_kurzName, tischbereich_kurzName + '-' + cast(tisch_pri_nummer as VARCHAR), 
@@ -283,6 +285,6 @@ class Database:
         """
         rows: DBResult = self.execute_query(query)
         return rows
-        
+
 
 db: Database = Database()
