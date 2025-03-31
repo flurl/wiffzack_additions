@@ -99,6 +99,33 @@ def get_article_by_group(group: int) -> Response:
 @app.route("/api/update_storage/from/<int:from_storage_id>", methods=["POST"])
 @app.route('/api/update_storage/from/<int:from_storage_id>/to/<int:to_storage_id>', methods=['POST'])
 def update_storage(to_storage_id: int | None = None, from_storage_id: int | None = None) -> Response:
+    """
+    Update the storage by moving articles between storages or within a single storage.
+
+    This endpoint handles POST requests to update the storage by either adding or
+    withdrawing articles from a storage, or moving articles between two storages.
+    The operation can be performed in absolute or relative mode.
+
+    Parameters:
+    - to_storage_id (int, optional): The ID of the storage to add articles to.
+    - from_storage_id (int, optional): The ID of the storage to withdraw articles from.
+
+    Request Body (JSON):
+    - A dictionary where keys are arbitrary and values are dictionaries with the following structure:
+      {
+        "id": (int) Article ID,
+        "name": (str) Article name,
+        "amount": (int) Amount to add or withdraw
+      }
+
+    Query Parameters:
+    - method (str, optional): If set to "absolute", the operation will be performed in absolute mode.
+      Otherwise, it defaults to relative mode.
+
+    Returns:
+    - Response: A JSON response indicating the success or failure of the operation.
+      {'success': True} or {'success': False}
+    """
     articles: Any | None = request.json
     absolute: bool = True if request.args.get(
         "method") == "absolute" else False
@@ -162,6 +189,16 @@ def get_config(terminal_id: str) -> Response:
 
 @app.route("/api/set_init_inventory/storage/<int:storage_id>", methods=["GET"])
 def set_init_inventory(storage_id: int) -> Response:
+    """
+    sets the initial inventory for a storage.
+
+    Parameters:
+    - storage_id (int): The ID of the storage to set the initial inventory for.
+
+    Returns:
+    - Response: A JSON response indicating the success or failure of the operation.
+      {'success': True} or {'success': False}
+    """
     result: DBResult = wz.db.get_storage_name(storage_id)
     assert result is not None
     storage_name: str = result[0][0]
@@ -195,7 +232,6 @@ def wants_json_response() -> bool:
 
 
 def mk_response(data: DBResult, heading: str|None = None) -> Response:
-    print(heading)
     # Check the Accept header
     if wants_json_response():
         # Return the data as JSON
