@@ -3,7 +3,7 @@ import pymssql
 import threading
 import queue
 
-from .types import Article, StorageModifier, QueryQueueItem, ResultQueueItem
+from .types import Article, StorageModifier, QueryQueueItem, ResultQueueItem, DBResult
 
 
 class Database:
@@ -11,12 +11,13 @@ class Database:
         self.query_queue: queue.Queue[QueryQueueItem] = queue.Queue()
         self.connection: pymssql.Connection | None = None
         self.cursor: pymssql.Cursor | None = None
-        self.worker_thread = threading.Thread(target=self._query_worker, daemon=True)
+        self.worker_thread = threading.Thread(
+            target=self._query_worker, daemon=True)
         self.worker_thread.start()
 
     def connect_to_database(self, server: str, username: str, password: str, database: str) -> None:
         self.connection = pymssql.connect(server=server, user=username,
-                                            password=password, database=database, tds_version=r"7.0")
+                                          password=password, database=database, tds_version=r"7.0")
         self.cursor = self.connection.cursor()
 
     def _query_worker(self) -> NoReturn:
@@ -30,7 +31,8 @@ class Database:
             try:
                 self.cursor.execute(query, params)
                 try:
-                    result: list[tuple[Any, ...]] | None = self.cursor.fetchall()
+                    result: list[tuple[Any, ...]
+                                 ] | None = self.cursor.fetchall()
                 except pymssql.OperationalError:
                     # Statement not executed or executed statement has no resultset
                     result = None
@@ -58,14 +60,15 @@ class Database:
         assert self.connection is not None, "Connection is not initialized."
         self.connection.rollback()
 
-    def update_storage(self, sm: StorageModifier, absolute: bool=False) -> None:
+    def update_storage(self, sm: StorageModifier, absolute: bool = False) -> None:
         storage_id: int = sm.storage_id
         amount: int = sm.amount
         article: Article = sm.article
         try:
             # get the lager artikel
             query: LiteralString = f"""select top 1 * from internal_lager_artikel_by_priority(%s)"""
-            result: list[tuple[Any, ...]] | None = self.execute_query(query, (article.id,))
+            result: list[tuple[Any, ...]] | None = self.execute_query(
+                query, (article.id,))
             if result is None or len(result) == 0:
                 raise LookupError(
                     f"No storage article id found for article {article.id}.")
@@ -76,7 +79,8 @@ class Database:
             query: LiteralString = """select count(*) from lager_details 
                 where lager_detail_lager = %s and 
                 lager_detail_artikel = %s"""
-            result: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id, storage_article_id))
+            result: list[tuple[Any, ...]] | None = self.execute_query(
+                query, (storage_id, storage_article_id))
             if result is None or len(result) == 0:
                 raise LookupError(f"Error for query {query}.")
             count: int = result[0][0]
@@ -84,12 +88,12 @@ class Database:
                 query: LiteralString = f"""exec insert_lagerdetail %s, %s, %s, %s, %s"""
                 self.execute_query(
                     query, (storage_id, storage_article_id, 0, 0, 0))
-                
+
             # if we set the absolute value, first set the stock value to 0
             if absolute:
                 query: LiteralString = f"""update lager_details set lager_detail_istStand = 0 where lager_detail_lager = %s and lager_detail_artikel = %s"""
                 self.execute_query(query, (storage_id, storage_article_id))
-            
+
             query: LiteralString = f"""exec lager_update_stand %s, %s, %s"""
             self.execute_query(
                 query,  (article.id, storage_id, amount))
@@ -99,12 +103,12 @@ class Database:
             raise e
         self.commit()
 
-    def add_article_to_storage(self, sm: StorageModifier, absolute: bool=False) -> None:
+    def add_article_to_storage(self, sm: StorageModifier, absolute: bool = False) -> None:
         if sm.amount < 0:
             raise ValueError
         self.update_storage(sm, absolute)
 
-    def withdraw_article_from_storage(self, sm: StorageModifier, absolute: bool=False) -> None:
+    def withdraw_article_from_storage(self, sm: StorageModifier, absolute: bool = False) -> None:
         if sm.amount < 0:
             raise ValueError
         self.update_storage(sm._replace(amount=-sm.amount), absolute)
@@ -124,6 +128,19 @@ class Database:
         query: LiteralString = f"""select * from lager_artikel"""
         rows: list[tuple[Any, ...]] | None = self.execute_query(query)
         return rows
+    
+    def get_storage_articles_by_group(self, article_group_id: int) -> DBResult:
+        query: LiteralString = f"""
+            select artikel_id, artikel_bezeichnung
+            from artikel_basis, lager_artikel
+            where 1=1
+            and lager_artikel_artikel = artikel_id
+            and artikel_gruppe = %s
+        """
+        rows: DBResult = self.execute_query(query, (article_group_id,))
+        return rows
+    
+
 
     def get_storage_articles_in_storage(self, storage_id: int) -> list[tuple[Any, ...]] | None:
         """Retrieves all articles found in a specific storage.
@@ -150,7 +167,8 @@ class Database:
             and lager_detail_artikel = lager_artikel_lagerartikel
             and lager_detail_istStand > 0
         """
-        rows: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id,))
+        rows: list[tuple[Any, ...]] | None = self.execute_query(
+            query, (storage_id,))
         return rows
 
     def get_article_groups_in_storage(self, storage_id: int) -> list[tuple[Any, ...]] | None:
@@ -176,7 +194,8 @@ class Database:
             and lager_detail_lager = %s
             and lager_detail_istStand > 0
         """
-        rows: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id,))
+        rows: list[tuple[Any, ...]] | None = self.execute_query(
+            query, (storage_id,))
         return rows
 
     def get_articles_in_storage(self, storage_id: int, article_group_id: int | None = None) -> list[tuple[Any, ...]] | None:
@@ -192,14 +211,78 @@ class Database:
         if article_group_id is not None:
             query += f" and artikel_gruppe = %s"
             params = (storage_id, article_group_id)
-            
+
         rows: list[tuple[Any, ...]] | None = self.execute_query(query, params)
         return rows
-    
+
     def get_storage_name(self, storage_id: int) -> list[tuple[Any, ...]] | None:
         query: LiteralString = f"""select lager_bezeichnung from lager_basis where lager_id = %s"""
-        rows: list[tuple[Any, ...]] | None = self.execute_query(query, (storage_id,))
+        rows: list[tuple[Any, ...]] | None = self.execute_query(
+            query, (storage_id,))
         return rows
 
+    def get_client_sales(self, client: str) -> DBResult:
+        query: LiteralString = f"""
+            SELECT rechnung_kellnerKurzName, ROUND(SUM(rechnung_detail_preis * rechnung_detail_menge), 2) AS total_sales
+            FROM rechnungen_details, rechnungen_basis
+            WHERE 1=1
+            AND rechnung_kellnerKurzName = %s
+            AND rechnung_detail_rechnung = rechnung_id
+            AND checkpoint_tag IS NULL
+            GROUP BY rechnung_kellnerKurzName
+        """
+        rows: DBResult = self.execute_query(query, (client,))
+        return rows
+    
+    def get_tallied_articles(self, client: str) -> DBResult:
+        query: LiteralString = f"""
+            select sum(tisch_bondetail_absmenge), artikel_bezeichnung 
+            from tische_bereiche, tische_aktiv, tische_bons, tische_bondetails, artikel_basis, kellner_basis 
+            where 1=1 
+            and tisch_bondetail_artikel = artikel_id 
+            and tisch_bereich = tischbereich_id 
+            and tisch_bon_tisch = tisch_id 
+            and tisch_bondetail_bon = tisch_bon_id 
+            and tisch_bon_kellner = kellner_id 
+            and checkpoint_tag is null
+            and kellner_kurzName = %s 
+            group by artikel_bezeichnung 
+            having sum(tisch_bondetail_absmenge) > 0 
+            order by artikel_bezeichnung
+        """
+        rows: DBResult = self.execute_query(query, (client,))
+        return rows
+    
+    def get_latest_tallied_articles(self, client: str) -> DBResult:
+        query: LiteralString = f"""
+            select top 10 kellner_kurzName, tisch_bondetail_absmenge, artikel_bezeichnung \
+            from kellner_basis, tische_bons, tische_bondetails, artikel_basis \
+            where 1=1 \
+            and kellner_id = tisch_bon_kellner \
+            and tisch_bondetail_bon = tisch_bon_id \
+            and artikel_id = tisch_bondetail_artikel \
+            and kellner_kurzName like %s \
+            order by tisch_bon_dt_erstellung desc
+        """
+        rows: DBResult = self.execute_query(query, (f'%{client}%',))
+        return rows
+        
+    def get_wardrobe_sales(self) -> DBResult:
+        query: LiteralString = f"""
+            select kellner_kurzName, tischbereich_kurzName + '-' + cast(tisch_pri_nummer as VARCHAR), 
+            round(sum(tisch_bondetail_absmenge*tisch_bondetail_preis), 2), tischbereich_istAufwand
+            from tische_aktiv, tische_bereiche, tische_bons, tische_bondetails, kellner_basis
+            where 1=1
+            and tisch_bereich = tischbereich_id
+            and tisch_bon_tisch = tisch_id
+            and tisch_bondetail_bon = tisch_bon_id
+            and tisch_bon_kellner = kellner_id
+            and checkpoint_tag is null
+            and kellner_kurzName like '%garderobe%'
+            group by kellner_kurzName, tischbereich_kurzName + '-' + cast(tisch_pri_nummer as VARCHAR), tischbereich_istAufwand
+        """
+        rows: DBResult = self.execute_query(query)
+        return rows
+        
 
 db: Database = Database()

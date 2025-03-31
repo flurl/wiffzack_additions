@@ -31,10 +31,10 @@ app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
 
 
-@app.route('/api/sales/<string:client>', methods=['GET'])
+@app.route('/api/<string:client>/sales', methods=['GET'])
 def get_sales(client: str) -> Response:
     """
-    Retrieve total sales for a specific waiter from the database.
+    Retrieve total sales for a specific client from the database.
 
     This endpoint handles GET requests to retrieve the total sales
     for a given waiter's short name. The sales are aggregated from 
@@ -42,7 +42,7 @@ def get_sales(client: str) -> Response:
     database.
 
     Parameters:
-    - client (str): The short name of the client to filter 
+    - client (str): The short name of the waiter to filter 
       sales data.
 
     Returns:
@@ -50,20 +50,24 @@ def get_sales(client: str) -> Response:
       data grouped by the waiter's short name.
     """
 
-    # Define the query with the parameter
-    query: LiteralString = f"""
-    SELECT rechnung_kellnerKurzName, ROUND(SUM(rechnung_detail_preis * rechnung_detail_menge), 2) AS total_sales
-    FROM rechnungen_details, rechnungen_basis
-    WHERE 1=1
-    AND rechnung_kellnerKurzName LIKE %s
-    AND rechnung_detail_rechnung = rechnung_id
-    AND checkpoint_tag IS NULL
-    GROUP BY rechnung_kellnerKurzName
-    """
+    result: DBResult = wz.db.get_client_sales(client)
+    return mk_response(result, "sales")
 
-    rows: DBResult = wz.db.execute_query(
-        query, (f'%{client}%',))
-    return mk_response(rows, "sales")
+
+@app.route('/api/<string:client>/tallied_articles', methods=['GET'])
+def get_tallied_articles(client: str) -> Response:
+    return mk_response(wz.db.get_tallied_articles(client), "Tallied articles")
+
+
+@app.route('/api/<string:client>/latest_tallied_articles', methods=['GET'])
+def get_latest_tallied_articles(client: str) -> Response:
+    return mk_response(wz.db.get_latest_tallied_articles(client), "Latest")
+
+
+@app.route('/api/wardrobe_sales', methods=['GET'])
+def get_wardrobe_sales() -> Response:
+    result: DBResult = wz.db.get_wardrobe_sales()
+    return mk_response(result, "Wardrobe Sales")
 
 
 @app.route('/api/artikel', methods=['GET'])
@@ -87,15 +91,8 @@ def get_storage_article_groups(storage_id: int | None = None) -> Response:
 
 @app.route('/api/storage_article_by_group/<int:group>', methods=['GET'])
 def get_article_by_group(group: int) -> Response:
-    query: LiteralString = f"""
-        select artikel_id, artikel_bezeichnung
-        from artikel_basis, lager_artikel
-        where 1=1
-        and lager_artikel_artikel = artikel_id
-        and artikel_gruppe = %s
-    """
-    rows: DBResult = wz.db.execute_query(query, (group,))
-    return mk_response(rows)
+    result: DBResult = wz.db.get_storage_articles_by_group(group)
+    return mk_response(result)
 
 
 @app.route("/api/update_storage/to/<int:to_storage_id>", methods=["POST"])
