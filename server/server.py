@@ -12,8 +12,8 @@ from werkzeug.wrappers import Response
 import wiffzack as wz
 from wiffzack.types import Article, StorageModifier, DBResult
 
-logging.basicConfig(level=logging.DEBUG,
-                    format="%(asctime)s %(levelname)s - %(filename)s:%(lineno)d %(funcName)s: %(message)s")
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 with open("config.toml", "rb") as f:
@@ -129,15 +129,15 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
     articles: Any | None = request.json
     absolute: bool = True if request.args.get(
         "method") == "absolute" else False
-    logging.debug(f"Moving from {from_storage_id} to {to_storage_id}")
-    logging.debug(articles)
+    logger.debug(f"Moving from {from_storage_id} to {to_storage_id}")
+    logger.debug(articles)
     if articles is None:
         return jsonify({'success': False})
 
     if from_storage_id is not None:
         try:
             for article in articles.values():
-                logging.debug("from", article)
+                logger.debug("from", article)
                 sm: StorageModifier = StorageModifier(article=Article(article["id"], article["name"]),
                                                       storage_id=from_storage_id,
                                                       amount=article["amount"])
@@ -149,7 +149,7 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
     if to_storage_id is not None:
         try:
             for article in articles.values():
-                logging.debug("to", article)
+                logger.debug("to", article)
                 sm: StorageModifier = StorageModifier(article=Article(article["id"], article["name"]),
                                                       storage_id=to_storage_id,
                                                       amount=article["amount"])
@@ -164,23 +164,23 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
 @app.route("/api/get_articles_in_storage/<int:storage_id>", methods=["GET"])
 @app.route("/api/get_articles_in_storage/<int:storage_id>/article_group/<int:article_group_id>", methods=["GET"])
 def get_articles_in_storage(storage_id: int, article_group_id: int | None = None) -> Response:
-    logging.debug(storage_id)
+    logger.debug(storage_id)
     result: DBResult = wz.db.get_articles_in_storage(
         storage_id, article_group_id)
-    logging.debug(result)
+    logger.debug(result)
     return mk_response(result)
 
 
 @app.route("/api/get_storage_name/<int:storage_id>", methods=["GET"])
 def get_storage_name(storage_id: int) -> Response:
     result: DBResult = wz.db.get_storage_name(storage_id)
-    logging.debug(result)
+    logger.debug(result)
     return mk_response(result)
 
 
 @app.route("/api/get_config/<string:terminal_id>", methods=["GET"])
 def get_config(terminal_id: str) -> Response:
-    logging.debug(config)
+    logger.debug(config)
     try:
         return jsonify({'success': True, 'config': config["terminal_config"][terminal_id]})
     except KeyError:
@@ -202,27 +202,27 @@ def set_init_inventory(storage_id: int) -> Response:
     result: DBResult = wz.db.get_storage_name(storage_id)
     assert result is not None
     storage_name: str = result[0][0]
-        
+
     filename: str = f"{config['server']['init_stock_directory']}{storage_name}.csv"
 
     try:
-        with open(filename, mode ='r') as file:
+        with open(filename, mode='r') as file:
             csvFile = csv.DictReader(file, delimiter=';')
             for line in csvFile:
-                    id:int = int(line["article_id"])
-                    amount:int = int(line["amount"])
-                    sm:StorageModifier = StorageModifier( article=Article(id, ""),
-                                            storage_id=storage_id,
-                                            amount=amount)
-                    try:
-                        wz.db.update_storage(sm, absolute=True)
-                    except Exception as e:
-                        print(e)
-                        return jsonify({'success': False})
+                id: int = int(line["article_id"])
+                amount: int = int(line["amount"])
+                sm: StorageModifier = StorageModifier(article=Article(id, ""),
+                                                      storage_id=storage_id,
+                                                      amount=amount)
+                try:
+                    wz.db.update_storage(sm, absolute=True)
+                except Exception as e:
+                    print(e)
+                    return jsonify({'success': False})
     except FileNotFoundError as e:
         print(e)
         return jsonify({'success': False})
-                
+
     return jsonify({'success': True})
 
 
@@ -231,7 +231,7 @@ def wants_json_response() -> bool:
         request.accept_mimetypes['text/html']
 
 
-def mk_response(data: DBResult, heading: str|None = None) -> Response:
+def mk_response(data: DBResult, heading: str | None = None) -> Response:
     # Check the Accept header
     if wants_json_response():
         # Return the data as JSON
@@ -242,4 +242,7 @@ def mk_response(data: DBResult, heading: str|None = None) -> Response:
 
 
 if __name__ == '__main__':
+    import logging.config
+    logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
+    logger.info("Starting server")
     app.run(debug=True)
