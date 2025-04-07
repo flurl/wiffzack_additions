@@ -60,6 +60,10 @@ class Database:
         assert self.connection is not None, "Connection is not initialized."
         self.connection.rollback()
 
+    """********************
+    ** STORAGE
+    ********************"""
+
     def update_storage(self, sm: StorageModifier, absolute: bool = False) -> None:
         storage_id: int = sm.storage_id
         amount: int = sm.amount
@@ -284,6 +288,33 @@ class Database:
             group by kellner_kurzName, tischbereich_kurzName + '-' + cast(tisch_pri_nummer as VARCHAR), tischbereich_istAufwand
         """
         rows: DBResult = self.execute_query(query)
+        return rows
+
+    """********************
+    ** INVOICES
+    ********************"""
+
+    def get_invoice_data(self, invoice_id: int) -> DBResult:
+        query: LiteralString = """
+            select rechnung_nr, rechnung_dt_erstellung, rechnung_detail_absmenge, 
+            rechnung_detail_preis*rechnung_detail_absmenge, rechnung_detail_text,
+            (select sum(rechnung_detail_absmenge*rechnung_detail_preis) from rechnungen_details where rechnung_detail_rechnung = rechnung_id) as total,
+            case mwst_satz when 10.00 then 'A' when 20.00 then 'B' when 5.00 then 'C' end as mwstsatz,
+            (rechnung_detail_preis*rechnung_detail_absmenge)/(100+mwst_satz)*mwst_satz as mwst,
+            mwst_bezeichnung, rechnung_tischCode, rechnung_kellnerKurzName,
+            rechnung_kassenidentifikation, rechnung_barumsatz_nr, dbo.GetMachineCodeQr(rechnung_id),
+            adresse_vorname, adresse_nachname, adresse_strasse, adresse_plz, adresse_ort, adresse_firma,
+            adresse_id, rechnung_id
+            from rechnungen_basis
+            full outer join rechnungen_adressen
+            on rechnungen_basis.rechnung_adresse = rechnungen_adressen.adresse_id,
+            rechnungen_details, meta_mwstgruppen
+            where 1=1
+            and rechnung_id = rechnung_detail_rechnung
+            and rechnung_detail_mwst = mwst_id
+            and rechnung_id = %s
+        """
+        rows: DBResult = self.execute_query(query, (invoice_id,))
         return rows
 
 

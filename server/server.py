@@ -226,6 +226,14 @@ def set_init_inventory(storage_id: int) -> Response:
     return jsonify({'success': True})
 
 
+@app.route("/api/print_invoice/<int:invoice_id>", methods=["GET"])
+def print_invoice(invoice_id: int) -> Response:
+    # result: DBResult = wz.db.get_invoice_data(invoice_id)
+    # logging.debug(result)
+    print("print_invoice", invoice_id)
+    return mk_response(None, "Invoice")
+
+
 def wants_json_response() -> bool:
     return request.accept_mimetypes['application/json'] >= \
         request.accept_mimetypes['text/html']
@@ -245,4 +253,4 @@ if __name__ == '__main__':
     import logging.config
     logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
     logger.info("Starting server")
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True)
