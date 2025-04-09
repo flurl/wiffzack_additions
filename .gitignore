@@ -38,3 +38,5 @@ venv*
 typings
 server/assets/init/*.csv
 
+.timetracker
+server/spool
