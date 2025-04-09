@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import logging
-from typing import Any, LiteralString
+import subprocess
+import time
+from typing import Any, LiteralString, NoReturn
 import tomllib
 import csv
+import threading
 
 from flask import Flask, jsonify, make_response, render_template, request
 from flask_cors import CORS
@@ -15,6 +18,8 @@ from wiffzack.types import Article, StorageModifier, DBResult
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+
+print_service_process: subprocess.Popen[bytes]
 
 with open("config.toml", "rb") as f:
     config: dict[str, Any] = tomllib.load(f)
@@ -228,10 +233,60 @@ def set_init_inventory(storage_id: int) -> Response:
 
 @app.route("/api/print_invoice/<int:invoice_id>", methods=["GET"])
 def print_invoice(invoice_id: int) -> Response:
-    # result: DBResult = wz.db.get_invoice_data(invoice_id)
-    # logging.debug(result)
-    print("print_invoice", invoice_id)
-    return mk_response(None, "Invoice")
+    """
+    Triggers the printing of an invoice by sending the invoice ID to the print service.
+
+    This endpoint handles GET requests to initiate the printing of a specific invoice.
+    It communicates with the print service by writing the invoice ID to the standard
+    input of the print service process.
+
+    Parameters:
+    - invoice_id (int): The ID of the invoice to be printed.
+
+    Returns:
+    - Response: A JSON response indicating the success or failure of the operation.
+      {'success': True} or {'success': False}
+    """
+    global print_service_process
+    logger.info(f"Printing invoice with ID {invoice_id}")
+    try:
+        assert print_service_process.stdin is not None
+        print_service_process.stdin.write(
+            f"{invoice_id}:invoice:escpos\n".encode())
+        print_service_process.stdin.flush()
+    except Exception as e:
+        logger.error(f"Failed to send print job to print service: {e}")
+        return jsonify({'success': False})
+    return jsonify({'success': True})
+
+
+def monitor_print_service(process: subprocess.Popen[bytes]) -> NoReturn:
+    """
+    Monitors the print service process and restarts it if it exits.
+
+    This function continuously monitors the print service process. If the process
+    exits, it logs an error and attempts to restart the process.
+
+    Args:
+        process (subprocess.Popen): The print service process to monitor.
+    """
+    logger.info("Monitoring print service")
+    while True:
+        return_code: int | None = process.poll()
+        if return_code is not None:
+            logger.error(
+                f"Print service exited with return code: {return_code}")
+            logger.info("Restarting print service...")
+            process = start_print_service()
+        time.sleep(1)
+
+
+def start_print_service() -> subprocess.Popen[bytes]:
+    global print_service_process
+    logger.info("Starting print service")
+    print_service_process = subprocess.Popen(
+        ["python3", "print_service.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return print_service_process
 
 
 def wants_json_response() -> bool:
@@ -253,4 +308,10 @@ if __name__ == '__main__':
     import logging.config
     logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
     logger.info("Starting server")
+    print_service_process = start_print_service()
+    monitor_thread = threading.Thread(
+        target=monitor_print_service, args=(print_service_process,), daemon=True)
+    monitor_thread.start()
+    import threading
+
     app.run(host="0.0.0.0", debug=True)
