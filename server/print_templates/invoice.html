@@ -1,0 +1,53 @@
+<html>
+
+<head>
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        hr.paper_full_cut {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <font face="b">
+        <center>
+            <p><b>Broditz & Grantrager Zwist GmbH</b></p>
+            <p>Disputgasse 23 - 666 Orkus</p>
+            <p>ATU 108 101 99 107 116 115 109 105</p>
+        </center>
+        <br />
+        %if (firma or nachname):
+        <p>{{firma}}</p>
+        <p>{{nachname}} {{vorname}}</p>
+        <p>{{strasse}}</p>
+        <p>{{plz}} {{ort}}</p>
+        %endif
+        <hr />
+
+        <p><b>Rechnung {{barumsatzNummer}} / {{invoiceNumber}}</b></p>
+        <p>KasseID: {{kasseid}}</p>
+        <p>Tisch: {{tischCode}} Kellner: {{kellnerKurzName}}</p>
+        <p>Datum: {{date}}</p>
+        <hr />
+        <p>{{articles}}</p>
+        <hr />
+        <p align="right">Summe: {{total}}</p>
+        <hr size="2" />
+        <p>Betrag dankend erhalten</p>
+        <p>{{taxes}}</p>
+        <p>Alle Preise in Euro</p>
+        <p>
+            <qr>{{qrCode}}</qr>
+        </p>
+        <p>{{qrCode}}</p>
+        <!--<p><bar height="64">{{invoiceNumber}}</bar></p>-->
+        <hr class="paper_full_cut" />
+    </font>
+</body>
+
+</html>

@@ -6,10 +6,11 @@ import queue
 import threading
 import logging
 from pathlib import Path
-from string import Template
 from decimal import Decimal
-from typing import Any, NoReturn, TypeAlias, Optional
+from typing import Any, LiteralString, NoReturn, TypeAlias, Optional
 from dataclasses import dataclass, field
+
+import step
 
 from lib.EscPos.EscPosHTMLParser import EscPosHTMLParser
 import wiffzack as wz
@@ -18,10 +19,16 @@ from wiffzack.types import DBResult
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+PRINTERPROFILE: LiteralString = "TM-T88II"
+SPOOLDIR: Path = Path("./spool")
+PRINTTEMPLATESPATH: Path = Path("./print_templates/")
+
 
 @dataclass(order=True)
 class PrintJob:
     invoice_id: int = field(compare=False)
+    template: str = field(compare=False)
+    output: str = field(compare=False)
     tries: int = field(default=0, compare=False)
 
 
@@ -60,7 +67,7 @@ class PrintService:
             target=self.print_worker, daemon=True)
         self.worker_thread.start()
 
-    def enqueue_print_job(self, invoice_id: int) -> None:
+    def enqueue_print_job(self, invoice_id: int, template: str, output: str) -> None:
         """
         Enqueues a print job for a given invoice ID.
 
@@ -71,14 +78,18 @@ class PrintService:
 
         Args:
             invoice_id (int): The ID of the invoice to be printed.
+            template (str): The template name to be used
+            output (str): The output format to be used
         """
         self.print_queue.put(
-            (-invoice_id, PrintJob(invoice_id)))
+            (-invoice_id, PrintJob(invoice_id, template, output)))
 
     def print_worker(self) -> NoReturn:
         while True:
             item: print_queue_item = self.print_queue.get()
             invoice_id: int = item[1].invoice_id
+            template: str = item[1].template
+            output: str = item[1].output
             retries: int = item[1].tries
 
             if retries >= 3:
@@ -90,7 +101,7 @@ class PrintService:
 
             logger.debug(f"Printing invoice: {invoice_id}")
             try:
-                self.print_invoice(invoice_id)
+                self.print_invoice(invoice_id, template, output)
                 logger.debug(f"Finished printing invoice: {invoice_id}")
             except Exception as e:
                 """
@@ -107,24 +118,44 @@ class PrintService:
                 self.print_queue.task_done()
 
     def listen_for_input(self) -> None:
+        """
+        Listens for input from stdin and enqueues print jobs.
+
+        This method continuously reads lines from standard input, parses them
+        as print job requests, and enqueues them into the print queue. Each line
+        is expected to contain the invoice ID, optionally followed by the template
+        name and output format, separated by spaces.
+        """
+
         for line in sys.stdin:
+            params: list[str] = line.strip().split(":")
             try:
-                invoice_id: int = int(line.strip())
-                self.enqueue_print_job(invoice_id)
-            except ValueError:
+                invoice_id: int = int(params[0])
+            except ValueError as e:
                 logging.error(f"Invalid input: {line.strip()}")
+                raise e
+            try:
+                template: str = params[1]
+            except IndexError:
+                template = "invoice"
+            try:
+                output: str = params[2]
+            except IndexError:
+                output = "escpos"
+            self.enqueue_print_job(invoice_id, template, output)
 
     def parse_invoice(self,
                       invoice_data: list[InvoiceDataRow],
-                      template: Path,
-                      output: str = 'html') -> str:
+                      template: str,
+                      output: str = 'html') -> bytes:
 
-        with open(template, 'r') as f:
-            tmpl: Template = Template(f.read())
+        logger.debug(f"printing invoice {invoice_data[0].invoice_nr}")
+        # logger.debug(f"template: {template}")
+        logger.debug(f"output: {output}")
 
+        tmpl: step.Template = step.Template(template)  # type: ignore
         articles: str = ''
         taxes: dict[str, list[Decimal | str]] = {}
-
         for row in invoice_data:
             amount: int = row.article_amount
             article: str = row.article
@@ -148,36 +179,38 @@ class PrintService:
             taxes_text += '{0}: {1} MwSt. von {3:.2f} = {2:.2f}<br />'.format(
                 key, value[1], value[0], value[2])
 
-        invoice: str = tmpl.safe_substitute({'articles': articles,
-                                             'invoiceNumber': invoice_number,
-                                             'date': '{0:%Y-%m-%d %H:%M}'.format(invoice_data[0].date),
-                                             'total': '{0:.2f}'.format(invoice_data[0].invoice_total),
-                                             'taxes': taxes_text,
-                                             'tischCode': invoice_data[0].table,
-                                             'kellnerKurzName': invoice_data[0].waiter,
-                                             'kasseid': invoice_data[0].register_id,
-                                             'barumsatzNummer': invoice_data[0].cash_nr,
-                                             'qrCode': invoice_data[0].qr_code,
-                                             'vorname': invoice_data[0].first_name if invoice_data[0].first_name is not None else "",
-                                             'nachname': invoice_data[0].last_name if invoice_data[0].last_name is not None else "",
-                                             'strasse': invoice_data[0].street if invoice_data[0].street is not None else "",
-                                             'plz': invoice_data[0].zip_code if invoice_data[0].zip_code is not None else "",
-                                             'ort': invoice_data[0].city if invoice_data[0].city is not None else "",
-                                             'firma': invoice_data[0].company if invoice_data[0].company is not None else ""
-                                             })
-        if output == 'html':
-            return invoice.replace("\n", "")
-        else:
-            parser = EscPosHTMLParser()
-            parser.feed(invoice)
-            return parser.code
+        namespace: dict[str, str] = {
+            'articles': articles,
+            'invoiceNumber': invoice_number,
+            'date': '{0:%Y-%m-%d %H:%M}'.format(invoice_data[0].date),
+            'total': '{0:.2f}'.format(invoice_data[0].invoice_total),
+            'taxes': taxes_text,
+            'tischCode': invoice_data[0].table,
+            'kellnerKurzName': invoice_data[0].waiter,
+            'kasseid': invoice_data[0].register_id,
+            'barumsatzNummer': invoice_data[0].cash_nr,
+            'qrCode': invoice_data[0].qr_code,
+            'vorname': invoice_data[0].first_name if invoice_data[0].first_name is not None else "",
+            'nachname': invoice_data[0].last_name if invoice_data[0].last_name is not None else "",
+            'strasse': invoice_data[0].street if invoice_data[0].street is not None else "",
+            'plz': invoice_data[0].zip_code if invoice_data[0].zip_code is not None else "",
+            'ort': invoice_data[0].city if invoice_data[0].city is not None else "",
+            'firma': invoice_data[0].company if invoice_data[0].company is not None else ""
+        }
+        invoice: str = str(tmpl.expand(namespace))  # type: ignore
 
-    def print_invoice(self, invoice_id: int):
+        if output == 'html':
+            return invoice.replace("\n", "").encode('iso-8859-1')
+        else:
+            parser = EscPosHTMLParser(PRINTERPROFILE)
+            parser.feed(invoice)
+            return parser.output
+
+    def print_invoice(self, invoice_id: int, template_name: str, output: str = "escpos") -> None:
         result: DBResult = wz.db.get_invoice_data(invoice_id)
         if not result:
             raise LookupError
 
-        SPOOLDIR: Path = Path("./spool")
         row: tuple[Any, ...]
         invoice_data: list[InvoiceDataRow] = []
         for row in result:
@@ -206,20 +239,13 @@ class PrintService:
 
         save_dir: Path = SPOOLDIR / invoice_data[0].waiter
         save_dir.mkdir(parents=True, exist_ok=True)
-        template: Path = Path("./print_templates/invoice/invoice.html")
-        with open(save_dir / f"invoice_{invoice_id}", "w") as f:
-            f.write(self.parse_invoice(invoice_data, template, "escpos"))
-
-        """fh = open( SPOOLDIR+os.sep+bar+os.sep+'invoice_'+str(uuid.uuid1()), 'wb')
-        fh.write(self._parseInvoice('escpos', template=template))
-        fh.close()
-        if self._rechnung_m_name:
-            self._rechnung_m_name = False
-            time.sleep(1)
-            fh = open( SPOOLDIR+os.sep+bar+os.sep+ \
-                      'invoice_'+str(uuid.uuid1()), 'wb')
-            fh.write(self._parseInvoice('escpos', template=template))
-            fh.close()"""
+        # template: Path = Path()
+        with open(PRINTTEMPLATESPATH / f"{template_name}.html", "r") as f:
+            template: str = f.read()
+            with open(save_dir / f"{template_name}_{invoice_id}", "wb") as f:
+                invoice: bytes = self.parse_invoice(
+                    invoice_data, template, output=output)
+                f.write(invoice)
 
 
 if __name__ == "__main__":
