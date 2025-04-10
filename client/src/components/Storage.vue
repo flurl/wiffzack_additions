@@ -9,8 +9,6 @@ import { useColor } from '../utils/useColor';
 const { stringToColor, colorIsDarkSimple } = useColor();
 
 
-import axios from 'axios';
-
 const { t } = useI18n()
 
 // get the current instance
@@ -188,9 +186,9 @@ const onInitClicked = () => {
         async () => {
             if (await setInitInventory()) {
                 showModal(t('message.init_stock_success'),
-                "",
-                { ok: true, cancel: false },
-            );
+                    "",
+                    { ok: true, cancel: false },
+                );
             } else {
                 showModal(t('message.init_stock_error'),
                     error.value,
@@ -413,5 +411,4 @@ button.confirm {
 .dest-storage-switch {
     padding: 0.5rem;
 }
-
 </style>
