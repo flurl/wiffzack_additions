@@ -39,15 +39,15 @@ body {
 }
 
 #app {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 /* Base styles for all buttons */
-.button, 
+.button,
 button {
-  background-color: $light-button-background; /* Example color, adjust as needed */
+  background-color: $light-button-background;
   border: $light-border;
   color: $light-button-text;
   padding: 15px 32px;
@@ -57,21 +57,26 @@ button {
   font-size: 16px;
   margin: 4px 2px;
   cursor: pointer;
-  border-radius: 5px; /* Add some rounding for a softer look */
-  transition: background-color 0.3s ease; /* Smooth transition for hover/active */
+  border-radius: 5px;
+  /* Smooth transition for hover/active */
+  transition: background-color 0.3s ease;
 
   /* Important for touch devices: increase tap target size */
-  padding: 20px 40px; /* Adjust padding for larger tap area */
-  min-width: 4rem; /* Ensure sufficient width */
+  /* Adjust padding for larger tap area */
+  padding: 20px 40px;
+  /* Ensure sufficient width */
+  min-width: 4rem;
 
 
   /* Hover and active states */
   &:hover {
-    background-color: color.scale($light-button-background, $lightness: -10%); /* Darker shade on hover */
+    /* Darker shade on hover */
+    background-color: color.scale($light-button-background, $lightness: -10%);
   }
 
   &:active {
-    background-color: color.scale($light-button-background, $lightness: -30%); /* Even darker shade when pressed */
+    /* Even darker shade when pressed */
+    background-color: color.scale($light-button-background, $lightness: -30%);
     transform: translateY(2px);
   }
 
@@ -83,7 +88,7 @@ button {
 
   /* Consider adding these for different button styles */
   &.confirm {
-    background-color: $light-confirm; 
+    background-color: $light-confirm;
   }
 
   &.cancel {
@@ -95,9 +100,11 @@ button {
   }
 
 }
+
 .button-outline {
   background-color: transparent;
-  border: 2px solid #4CAF50; /* Green border */
+  border: 2px solid #4CAF50;
+  /* Green border */
   color: #4CAF50;
 }
 
@@ -110,7 +117,7 @@ button {
 }
 
 /* columns */
-.three-columns-grid > * {
+.three-columns-grid>* {
   border: 1px dashed black;
   position: relative;
 }

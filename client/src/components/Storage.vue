@@ -265,63 +265,75 @@ const exit = (success) => {
 </script>
 
 <template>
-    <ModalDialog :title="modalConf.title" :show="modalConf.show" :buttons="modalConf.buttons" @ok="modalConf.OKCallback"
-        @cancel="modalConf.cancelCallback">
-        <p v-if="modalConf.rawHTML === false">{{ modalConf.body }}</p>
-        <span v-else v-html="modalConf.body"></span>
-    </ModalDialog>
+    <div class="wrapper">
+        <ModalDialog :title="modalConf.title" :show="modalConf.show" :buttons="modalConf.buttons"
+            @ok="modalConf.OKCallback" @cancel="modalConf.cancelCallback">
+            <p v-if="modalConf.rawHTML === false">{{ modalConf.body }}</p>
+            <span v-else v-html="modalConf.body"></span>
+        </ModalDialog>
 
-    <header class="header">
-        <h1 class="left">{{ sourceStorage.name }} -> {{ destinationStorage.name }}</h1>
-        <a class="button left"
-            :href="`?terminal=${$terminalConfig.name}&sourceStorageId=${destinationStorage.id}&destinationStorageId=${sourceStorage.id}`">⇄</a>
-        <button class="button right" v-if="props.mode === 'stock'" @click="onInitClicked">Init</button>
-        <button class="button" @click="exit(true)">Quit</button>
-    </header>
+        <header class="header">
+            <h1 class="left">{{ sourceStorage.name }} -> {{ destinationStorage.name }}</h1>
+            <a class="button left"
+                :href="`?terminal=${$terminalConfig.name}&sourceStorageId=${destinationStorage.id}&destinationStorageId=${sourceStorage.id}`">⇄</a>
+            <button class="button right" v-if="props.mode === 'stock'" @click="onInitClicked">Init</button>
+            <button class="button" @click="exit(true)">Quit</button>
+        </header>
 
-    <div class="amount-selector">
-        <button class="article-amount" @click="decrement">-</button>
-        <input class="article-amount" type="text" :value="amount ? amount : $t('message.all')">
-        <button class="article-amount" @click="increment">+</button>
-        <button class="article-amount" :class="[_amount === 1 ? 'active' : '']" @click="_amount = 1">x1</button>
-        <button class="article-amount" :class="[_amount === 6 ? 'active' : '']" @click="_amount = 6">x6</button>
-        <button class="article-amount" :class="[_amount === 10 ? 'active' : '']" @click="_amount = 10">x10</button>
-        <button class="article-amount" :class="[_amount === 12 ? 'active' : '']" @click="_amount = 12">x12</button>
-        <button class="article-amount" :class="[_amount === 24 ? 'active' : '']" @click="_amount = 24">x24</button>
-        <button class="article-amount" :class="[_amount === null ? 'active' : '']" @click="_amount = null">Alle</button>
-        <button class="confirm" @click="onOKClicked">OK</button>
-    </div>
-
-    <div class="three-columns-grid">
-        <div class="">
-            <button class="article-group" v-for="group in articleGroups" @click="activeArticleGroup = group"
-                :style="{ backgroundColor: stringToColor(group[1]).bg, color: stringToColor(group[1]).fg }">{{ group[1]
-                }}</button>
+        <div class="amount-selector">
+            <button class="article-amount" @click="decrement">-</button>
+            <input class="article-amount" type="text" :value="amount ? amount : $t('message.all')">
+            <button class="article-amount" @click="increment">+</button>
+            <button class="article-amount" :class="[_amount === 1 ? 'active' : '']" @click="_amount = 1">x1</button>
+            <button class="article-amount" :class="[_amount === 6 ? 'active' : '']" @click="_amount = 6">x6</button>
+            <button class="article-amount" :class="[_amount === 10 ? 'active' : '']" @click="_amount = 10">x10</button>
+            <button class="article-amount" :class="[_amount === 12 ? 'active' : '']" @click="_amount = 12">x12</button>
+            <button class="article-amount" :class="[_amount === 24 ? 'active' : '']" @click="_amount = 24">x24</button>
+            <button class="article-amount" :class="[_amount === null ? 'active' : '']"
+                @click="_amount = null">Alle</button>
+            <button class="confirm" @click="onOKClicked">OK</button>
         </div>
 
-        <div class="">
-            <template v-for="article in articles">
-                <div class="article-button">
-                    <button class="article" @click="addArticleToSelected(article)"
-                        :style="{ backgroundColor: stringToColor(activeArticleGroup[1]).bg, color: stringToColor(activeArticleGroup[1]).fg }">
-                        {{ article.name }}
-                    </button>
-                    <p>{{ article.amount ? article.amount : '-' }}</p>
-                </div>
-            </template>
-        </div>
-
-        <div class="right-col">
-            <ArticleList :articles="destDisplayArticles" @article-removed="removeArticleFromSelected"></ArticleList>
-            <div class="dest-storage-switch">
-                <ToggleSwitch :checked="showDestInventory" @toggled="onShowDestInventorySwitchToggled"></ToggleSwitch>
+        <div class="three-columns-grid">
+            <div class="">
+                <button class="article-group" v-for="group in articleGroups" @click="activeArticleGroup = group"
+                    :style="{ backgroundColor: stringToColor(group[1]).bg, color: stringToColor(group[1]).fg }">{{
+                        group[1]
+                    }}</button>
             </div>
-        </div>
 
+            <div class="">
+                <template v-for="article in articles">
+                    <div class="article-button">
+                        <button class="article" @click="addArticleToSelected(article)"
+                            :style="{ backgroundColor: stringToColor(activeArticleGroup[1]).bg, color: stringToColor(activeArticleGroup[1]).fg }">
+                            {{ article.name }}
+                        </button>
+                        <p>{{ article.amount ? article.amount : '-' }}</p>
+                    </div>
+                </template>
+            </div>
+
+            <div class="right-col">
+                <ArticleList :articles="destDisplayArticles" @article-removed="removeArticleFromSelected"></ArticleList>
+                <div class="dest-storage-switch">
+                    <ToggleSwitch :checked="showDestInventory" @toggled="onShowDestInventorySwitchToggled">
+                    </ToggleSwitch>
+                </div>
+            </div>
+
+        </div>
     </div>
 </template>
 
 <style lang="scss" scoped>
+.wrapper {
+    height: 100vh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
 .header {
     display: flex;
     /* justify-content: space-between; */
