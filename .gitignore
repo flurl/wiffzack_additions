@@ -29,6 +29,8 @@ coverage
 
 *.tsbuildinfo
 
+*.bak
+
 # python
 __pycache__/
 *.py[cod]
@@ -40,3 +42,4 @@ server/assets/init/*.csv
 
 .timetracker
 server/spool
+server/assets/messages
