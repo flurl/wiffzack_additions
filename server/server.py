@@ -298,7 +298,7 @@ def mk_response(data: DBResult, heading: str | None = None) -> Response:
     # Check the Accept header
     if wants_json_response():
         # Return the data as JSON
-        return jsonify(data)
+        return jsonify({"success": True, "data": data})
     else:
         # Return the data as an HTML table
         return make_response(render_template('data_table.html', data=data, heading=heading))
