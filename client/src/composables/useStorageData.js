@@ -17,7 +17,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
     const getStorageName = async (storage, storageId) => {
         try {
             const response = await axios.get(`${config.backendHost}/api/get_storage_name/${storageId}`);
-            storage.value.name = response.data[0][0];
+            storage.value.name = response.data.data[0][0];
         } catch (err) {
             error.value = err;
         }
@@ -32,7 +32,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         }
         try {
             const response = await axios.get(sourceStorageURL);
-            articleGroups.value = response.data;
+            articleGroups.value = response.data.data;
             activeArticleGroup.value = articleGroups.value[0];
         } catch (err) {
             error.value = err;
@@ -46,7 +46,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         error.value = null;
         try {
             const response = await axios.get(`${config.backendHost}/api/get_articles_in_storage/${destinationStorage.value.id}`);
-            response.data.forEach(art => {
+            response.data.data.forEach(art => {
                 destStorageArticles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
             });
         } catch (err) {
@@ -68,11 +68,11 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
             url = `${config.backendHost}/api/storage_article_by_group/${activeArticleGroup.value[0]}`;
         } else if (mode === "distribute" || mode === "transfer" || mode === "stock") {
             url = `${config.backendHost}/api/get_articles_in_storage/${sourceStorage.value.id}/article_group/${activeArticleGroup.value[0]}`;
-        } 
+        }
         try {
             const response = await axios.get(url);
             articles.value = {};
-            response.data.forEach(art => {
+            response.data.data.forEach(art => {
                 articles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
             });
         } catch (err) {
@@ -93,7 +93,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
             mode === "stock") {
             url += `/from/${sourceStorage.value.id}/to/${destinationStorage.value.id}?method=relative`;
         }
-    
+
         let data = selectedArticles.value
 
         try {
