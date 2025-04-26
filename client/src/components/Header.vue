@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import QuitButton from './QuitButton.vue';
 
 const props = defineProps({
