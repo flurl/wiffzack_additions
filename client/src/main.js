@@ -27,7 +27,9 @@ const i18n = createI18n({
         error: "Error",
         init_stock: "Set initial storage inventory",
         init_stock_success: "Setting the initial inventory succeeded",
-        init_stock_error: "Setting the initial inventory failed"
+        init_stock_error: "Setting the initial inventory failed",
+        messages: "Messages",
+        quit: "Quit"
       }
     },
     de: {
@@ -45,7 +47,9 @@ const i18n = createI18n({
         error: "Fehler",
         init_stock: "Initialen Lagerstand setzen",
         init_stock_success: "Initialen Lagerstand erfolgreich gesetzt",
-        init_stock_error: "Initialen Lagerstand konnte nicht gesetzt werden"
+        init_stock_error: "Initialen Lagerstand konnte nicht gesetzt werden",
+        messages: "Nachrichten",
+        quit: "Beenden"
       }
     }
   }
@@ -62,7 +66,7 @@ library.add(fas)
 
 const app = createApp(App)
 
-const config = {backendHost: 'http://localhost:5000'};
+const config = { backendHost: 'http://localhost:5000' };
 app.provide('config', config);
 
 
