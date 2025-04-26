@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 
+from dataclasses import asdict
 import logging
 import subprocess
 import time
-from typing import Any, LiteralString, NoReturn
+from typing import Any, Iterable, LiteralString, NoReturn
 import tomllib
 import csv
 import threading
 
-from flask import Flask, jsonify, make_response, render_template, request
+from flask import Flask, jsonify, make_response, render_template, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.wrappers import Response
 
 import wiffzack as wz
 from wiffzack.types import Article, StorageModifier, DBResult
+import lib.messages as messages
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -42,12 +44,12 @@ def get_sales(client: str) -> Response:
     Retrieve total sales for a specific client from the database.
 
     This endpoint handles GET requests to retrieve the total sales
-    for a given waiter's short name. The sales are aggregated from 
-    the 'rechnungen_details' and 'rechnungen_basis' tables in the 
+    for a given waiter's short name. The sales are aggregated from
+    the 'rechnungen_details' and 'rechnungen_basis' tables in the
     database.
 
     Parameters:
-    - client (str): The short name of the waiter to filter 
+    - client (str): The short name of the waiter to filter
       sales data.
 
     Returns:
@@ -260,6 +262,45 @@ def print_invoice(invoice_id: int) -> Response:
     return jsonify({'success': True})
 
 
+@app.route("/api/message/list", methods=["GET"])
+def get_messages() -> Response:
+    msgs: list[messages.Message] = messages.get_messages_list()
+    # Convert Message objects to dicts, ensuring path is a string
+    msgs_dicts: list[dict[str, Any]] = []
+    for msg in msgs:
+        msg_dict: dict[str, Any] = asdict(msg)
+        # # Explicitly convert the Path object to a string
+        # if isinstance(msg_dict.get("path"), pathlib.Path):
+        #     msg_dict["path"] = str(msg_dict["path"])
+        msgs_dicts.append(msg_dict)
+    return jsonify({"success": True, "messages": msgs_dicts})
+
+
+@app.route("/api/message/<string:message_path>", methods=["GET"])
+def send_message(message_path: str) -> Response:
+    try:
+        msg: messages.Message = messages.get_message(message_path)
+        return jsonify({"success": True,
+                        "data": {"message": msg}})
+    except FileNotFoundError:
+        return jsonify({'success': False})
+
+
+@app.route("/message/html/<string:message_path>/", methods=["GET"])
+@app.route("/message/html/<string:message_path>/<string:file>", methods=["GET"])
+def send_html_message(message_path: str, file: str | None = None) -> Response:
+    try:
+        msg: messages.Message = messages.get_message(message_path)
+        if msg.type != "html":
+            raise ValueError
+    except FileNotFoundError:
+        return jsonify({'success': False})
+
+    if file is None:
+        file = f"{msg.name}.{msg.type}"
+    return send_from_directory(messages.MESSAGEDIR / message_path, file)
+
+
 def monitor_print_service(process: subprocess.Popen[bytes]) -> NoReturn:
     """
     Monitors the print service process and restarts it if it exits.
@@ -294,7 +335,7 @@ def wants_json_response() -> bool:
         request.accept_mimetypes['text/html']
 
 
-def mk_response(data: DBResult, heading: str | None = None) -> Response:
+def mk_response(data: DBResult | Iterable[Any], heading: str | None = None) -> Response:
     # Check the Accept header
     if wants_json_response():
         # Return the data as JSON
