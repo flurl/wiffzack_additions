@@ -242,10 +242,20 @@ class PrintService:
         # template: Path = Path()
         with open(PRINTTEMPLATESPATH / f"{template_name}.html", "r") as f:
             template: str = f.read()
-            with open(save_dir / f"{template_name}_{invoice_id}", "wb") as f:
+            if output == "escpos":
+                with open(save_dir / f"{template_name}_{invoice_id}", "wb") as f:
+                    invoice: bytes = self.parse_invoice(
+                        invoice_data, template, output=output)
+                    f.write(invoice)
+            elif output == "html":
                 invoice: bytes = self.parse_invoice(
                     invoice_data, template, output=output)
-                f.write(invoice)
+                # sys.stdout.write(invoice.decode('iso-8859-1'))
+                print(invoice.decode('iso-8859-1'))
+                sys.stdout.flush()
+
+            else:
+                raise ValueError(f"Unknown output type: {output}")
 
 
 if __name__ == "__main__":

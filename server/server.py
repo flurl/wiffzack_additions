@@ -262,6 +262,30 @@ def print_invoice(invoice_id: int) -> Response:
     return jsonify({'success': True})
 
 
+@app.route("/api/invoice/html/<int:invoice_id>", methods=["GET"])
+def get_invoice_html(invoice_id: int) -> Response:
+    global print_service_process
+    try:
+        assert print_service_process.stdin is not None and print_service_process.stdout is not None
+        print_service_process.stdin.write(
+            f"{invoice_id}:invoice:html\n".encode())
+        print_service_process.stdin.flush()
+        #  read from print_service_process.stdout until </html> is detected.
+        # Then return the processes output as flask response
+        output: bytes = b""
+        while True:
+            line: bytes = print_service_process.stdout.readline()
+            if not line:
+                break
+            output += line
+            if b"</html>" in line.lower():
+                break
+        return mk_response(output.decode('iso-8859-1'))
+    except Exception as e:
+        logger.error(f"Failed to get html representation of invoice: {e}")
+        return jsonify({'success': False})
+
+
 @app.route("/api/message/list", methods=["GET"])
 def get_messages() -> Response:
     msgs: list[messages.Message] = messages.get_messages_list()
@@ -341,8 +365,15 @@ def mk_response(data: DBResult | Iterable[Any], heading: str | None = None) -> R
         # Return the data as JSON
         return jsonify({"success": True, "data": data})
     else:
-        # Return the data as an HTML table
-        return make_response(render_template('data_table.html', data=data, heading=heading))
+        if isinstance(data, str):
+            # Return the data as HTML
+            return make_response(data)
+        # will also match DBResult
+        elif isinstance(data, Iterable):
+            # Return the data as an HTML table
+            return make_response(render_template('data_table.html', data=data, heading=heading))
+        else:
+            raise TypeError(f"Unknown data type: {type(data)}")
 
 
 if __name__ == '__main__':
