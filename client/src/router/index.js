@@ -9,7 +9,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/data_table/:endpoint',
+      path: '/data_table/:endpoint(.+)',
       name: 'data_table',
       component: DataTable,
       props: true,

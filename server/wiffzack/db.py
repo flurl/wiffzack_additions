@@ -330,5 +330,29 @@ class Database:
             cast(LiteralString, query), (waiter,))
         return rows
 
+    def get_receipes(self) -> DBResult:
+        query: LiteralString = f"""
+            SELECT
+                art1.artikel_bezeichnung,
+                zutate_menge,
+                art2.artikel_bezeichnung
+            FROM
+                artikel_basis AS art1
+            INNER JOIN
+                artikel_zutaten ON zutate_master_artikel = art1.artikel_id
+            INNER JOIN
+                artikel_basis AS art2 ON zutate_artikel = art2.artikel_id
+            LEFT OUTER JOIN
+                lager_artikel ON lager_artikel_artikel = art2.artikel_id
+            LEFT OUTER JOIN
+                lager_einheiten ON lager_artikel_einheit = lager_einheit_id
+            WHERE
+                zutate_istRezept = 1
+            ORDER BY
+                art1.artikel_bezeichnung;
+        """
+        rows: DBResult = self.execute_query(query)
+        return rows
+
 
 db: Database = Database()

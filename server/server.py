@@ -333,6 +333,12 @@ def send_html_message(message_path: str, file: str | None = None) -> Response:
     return send_from_directory(messages.MESSAGEDIR / message_path, file)
 
 
+@app.route("/api/recipe/list", methods=["GET"])
+def get_receipes() -> Response:
+    result: DBResult = wz.db.get_receipes()
+    return mk_response(result)
+
+
 def monitor_print_service(process: subprocess.Popen[bytes]) -> NoReturn:
     """
     Monitors the print service process and restarts it if it exits.
