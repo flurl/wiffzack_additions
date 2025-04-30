@@ -30,8 +30,14 @@
     *   Retrieves configuration settings specific to the given terminal ID from the `config.toml` file.
 *   `GET /api/set_init_inventory/storage/<int:storage_id>`
     *   Sets the inventory count for articles in the specified storage based on data read from a corresponding CSV file (e.g., `StorageName.csv`). This effectively initializes or resets the stock count.
-*   `GET /api/print_invoice/<int:invoice_id>`
-    *   Sends a request to the background print service to print the specified invoice ID.
+*   `GET /api/invoice/list`
+    *   Retrieves a list of all invoices.
+*   `GET /api/invoice/list/<string:waiter>`
+    *   Retrieves a list of invoices filtered by a specific waiter.
+*   `GET /api/invoice/print/<int:invoice_id>`
+    *   Sends a request to the background print service to print the specified invoice ID (ESC/POS format).
+*   `GET /api/invoice/html/<int:invoice_id>`
+    *   Retrieves the HTML representation of the specified invoice from the background print service.
 *   `GET /api/message/list`
     *   Retrieves a list of available messages (metadata like path, name, type) from the configured message directory.
 *   `GET /api/message/<string:message_path>`

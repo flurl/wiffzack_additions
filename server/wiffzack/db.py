@@ -1,4 +1,4 @@
-from typing import Any, LiteralString, NoReturn
+from typing import Any, LiteralString, NoReturn, cast
 import pymssql
 import threading
 import queue
@@ -315,6 +315,19 @@ class Database:
             and rechnung_id = %s
         """
         rows: DBResult = self.execute_query(query, (invoice_id,))
+        return rows
+
+    def get_invoice_list(self, waiter: str | None = None, limit: int = 10) -> DBResult:
+        query: str = f"""
+            select top {limit} rechnung_id, rechnung_nr, rechnung_dt_erstellung, rechnung_tischCode, rechnung_kellnerKurzName
+            from rechnungen_basis
+            where 1=1
+            {' and rechnung_kellnerKurzName = %s' if waiter is not None else ''}
+            order by rechnung_dt_erstellung desc
+        """
+        print(query, waiter)
+        rows: DBResult = self.execute_query(
+            cast(LiteralString, query), (waiter,))
         return rows
 
 

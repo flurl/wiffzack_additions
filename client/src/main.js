@@ -29,7 +29,10 @@ const i18n = createI18n({
         init_stock_success: "Setting the initial inventory succeeded",
         init_stock_error: "Setting the initial inventory failed",
         messages: "Messages",
-        quit: "Quit"
+        quit: "Quit",
+        invoices: "Invoices",
+        show_all_invoices: "Show all invoices",
+        print: "Print"
       }
     },
     de: {
@@ -49,7 +52,10 @@ const i18n = createI18n({
         init_stock_success: "Initialen Lagerstand erfolgreich gesetzt",
         init_stock_error: "Initialen Lagerstand konnte nicht gesetzt werden",
         messages: "Nachrichten",
-        quit: "Beenden"
+        quit: "Beenden",
+        invoices: "Rechnungen",
+        show_all_invoices: "Alle Rechnungen anzeigen",
+        print: "Drucken"
       }
     }
   }

@@ -233,7 +233,15 @@ def set_init_inventory(storage_id: int) -> Response:
     return jsonify({'success': True})
 
 
-@app.route("/api/print_invoice/<int:invoice_id>", methods=["GET"])
+@app.route("/api/invoice/list", methods=["GET"])
+@app.route("/api/invoice/list/<string:waiter>", methods=["GET"])
+def get_invoice_list(waiter: str | None = None) -> Response:
+    result: DBResult = wz.db.get_invoice_list(waiter=waiter)
+    print(result)
+    return mk_response(result)
+
+
+@app.route("/api/invoice/print/<int:invoice_id>", methods=["GET"])
 def print_invoice(invoice_id: int) -> Response:
     """
     Triggers the printing of an invoice by sending the invoice ID to the print service.
