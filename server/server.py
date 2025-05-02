@@ -4,10 +4,12 @@ from dataclasses import asdict
 import logging
 import subprocess
 import time
-from typing import Any, Iterable, LiteralString, NoReturn
+from typing import Any, Iterable, LiteralString, NoReturn, cast
 import tomllib
 import csv
 import threading
+from pathlib import Path
+import copy
 
 from flask import Flask, jsonify, make_response, render_template, request, send_from_directory
 from flask_cors import CORS
@@ -21,16 +23,81 @@ import lib.messages as messages
 logger: logging.Logger = logging.getLogger(__name__)
 
 
+# --- Configuration Loading Logic ---
+
+def merge_configs(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merges override dict into base dict."""
+    merged: dict[str, Any] = copy.deepcopy(
+        base)  # Start with a deep copy of the base
+    for key, value in override.items():
+        if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+            # If both values are dicts, recurse
+            merged[key] = merge_configs(
+                merged[key], cast(dict[str, Any], value))
+        else:
+            # Otherwise, override the value
+            merged[key] = value
+    return merged
+
+
+# Define paths
+APP_DIR: Path = Path(__file__).parent  # Directory where server.py is located
+BASE_CONFIG_PATH: Path = APP_DIR / "config.toml"
+# Or choose another name like "wiffzack_config"
+USER_CONFIG_DIR: Path = Path.home() / ".wiffzack_additions"
+USER_CONFIG_PATH: Path = USER_CONFIG_DIR / "config.toml"
+
+# Load base configuration
+config: dict[str, Any] = {}
+try:
+    with open(BASE_CONFIG_PATH, "rb") as f:
+        config = tomllib.load(f)
+    logger.info(f"Loaded base configuration from: {BASE_CONFIG_PATH}")
+except FileNotFoundError:
+    logger.error(
+        f"CRITICAL: Base configuration file not found at {BASE_CONFIG_PATH}. Exiting.")
+    exit(1)  # Or handle this more gracefully depending on requirements
+except tomllib.TOMLDecodeError as e:
+    logger.error(
+        f"CRITICAL: Error decoding base configuration file {BASE_CONFIG_PATH}: {e}. Exiting.")
+    exit(1)
+
+# Load and merge user configuration if it exists
+if USER_CONFIG_PATH.exists() and USER_CONFIG_PATH.is_file():
+    try:
+        with open(USER_CONFIG_PATH, "rb") as f:
+            user_config: dict[str, Any] = tomllib.load(f)
+        config = merge_configs(config, user_config)  # Deep merge
+        logger.info(
+            f"Loaded and merged user configuration from: {USER_CONFIG_PATH}")
+    except tomllib.TOMLDecodeError as e:
+        logger.warning(
+            f"Could not parse user configuration file at {USER_CONFIG_PATH}: {e}. Using base configuration.")
+    except Exception as e:
+        logger.warning(
+            f"Could not read user configuration file at {USER_CONFIG_PATH}: {e}. Using base configuration.")
+else:
+    logger.info(
+        f"User configuration file not found at {USER_CONFIG_PATH}. Using base configuration only.")
+
+# --- End Configuration Loading Logic ---
+
+
 print_service_process: subprocess.Popen[bytes]
 
-with open("config.toml", "rb") as f:
-    config: dict[str, Any] = tomllib.load(f)
 
-
-wz.db.connect_to_database(config["database"]["server"],
-                          config["database"]["username"],
-                          config["database"]["password"],
-                          config["database"]["database"])
+try:
+    wz.db.connect_to_database(config["database"]["server"],
+                              config["database"]["username"],
+                              config["database"]["password"],
+                              config["database"]["database"])
+except KeyError as e:
+    logger.error(
+        f"CRITICAL: Missing database configuration key: {e}. Check your config.toml. Exiting.")
+    exit(1)
+except Exception as e:
+    logger.error(f"CRITICAL: Failed to connect to database: {e}. Exiting.")
+    exit(1)
 
 
 app = Flask(__name__)
@@ -400,4 +467,11 @@ if __name__ == '__main__':
     monitor_thread.start()
     import threading
 
-    app.run(host="0.0.0.0", debug=True)
+    # Use host/port from config if available, otherwise default
+    server_host: str = config.get("server", {}).get("host", "0.0.0.0")
+    server_port: int = config.get("server", {}).get("port", 5000)
+    debug_mode: bool = config.get("server", {}).get("debug", False)
+
+    logger.info(
+        f"Running Flask app on {server_host}:{server_port} with debug={debug_mode}")
+    app.run(host=server_host, port=server_port, debug=debug_mode)
