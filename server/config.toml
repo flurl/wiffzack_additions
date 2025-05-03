@@ -1,3 +1,6 @@
+[system]
+python_interpreter = "python3"
+
 [database]
 # Define your connection parameters
 server = "192.168.2.50:1433\\wiffzack"
@@ -6,9 +9,10 @@ username = "wiffzack"
 password = "wiffzack"
 
 [server]
-host = "localhost:5000"
+host = "localhost"
+port = 5000
+debug = false
 init_stock_directory = "assets/init/"
-
 
 
 [terminal_config]
