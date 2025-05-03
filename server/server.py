@@ -2,6 +2,7 @@
 
 from dataclasses import asdict
 import logging
+from pathlib import Path
 import subprocess
 import sys
 import time
@@ -39,10 +40,15 @@ except Exception as e:
     logger.error(f"CRITICAL: Failed to connect to database: {e}. Exiting.")
     exit(1)
 
+# --- Static File Configuration ---
+# Calculate the path to the 'dist' directory relative to this script (server.py)
+# Go up one level from 'server/' to the project root, then into 'client/dist/'
+STATIC_FOLDER: Path = Path(
+    __file__).resolve().parent.parent / 'client' / 'dist'
 
 app = Flask(__name__)
-# enable CORS
-CORS(app, resources={r'/*': {'origins': '*'}})
+# Limit CORS to API routes if needed
+CORS(app, resources={r'/api/*': {'origins': '*'}})
 
 
 @app.route('/api/<string:client>/sales', methods=['GET'])
@@ -345,6 +351,42 @@ def get_receipes() -> Response:
     result: DBResult = wz.db.get_receipes()
     return mk_response(result)
 
+# --- End API Routes ---
+
+# --- Catch-all route for Vue App ---
+# This route MUST be defined AFTER all other routes
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_vue_app(path: str) -> Response:
+    """Serves the Vue application's index.html or its static assets."""
+    logger.debug(f"Catch-all route received path: '{path}'")
+
+    # Construct the full path potential asset path within STATIC_FOLDER
+    asset_path: Path = STATIC_FOLDER / path
+
+    # Check if the path points to an existing file within STATIC_FOLDER
+    # Important: Use Path object methods for checking existence and type
+    if asset_path.is_file():
+        logger.debug(
+            f"Path points to an existing file. Serving asset: '{path}'")
+        # Use send_from_directory with the base STATIC_FOLDER and the relative path
+        return send_from_directory(STATIC_FOLDER, path)
+    else:
+        # If the path doesn't correspond to a file (or it's the root '/'),
+        # serve the main index.html file.
+        index_html_path: Path = STATIC_FOLDER / 'index.html'
+        logger.debug(
+            f"Path is not a file or is root. Attempting to serve index.html from: '{index_html_path}'")
+        if not index_html_path.is_file():
+            logger.error(
+                f"CRITICAL: index.html not found at '{index_html_path}'!")
+            return Response("Server configuration error: index.html not found.", 500)
+        # Use send_from_directory to serve index.html
+        return send_from_directory(STATIC_FOLDER, 'index.html')
+# --- End Catch-all Route ---
+
 
 def monitor_print_service(process: subprocess.Popen[bytes]) -> NoReturn:
     """
@@ -401,6 +443,7 @@ if __name__ == '__main__':
     import logging.config
     logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
     logger.info("Starting server")
+    logger.info(f"Serving static files from: {STATIC_FOLDER}")
     print_service_process = start_print_service()
     monitor_thread = threading.Thread(
         target=monitor_print_service, args=(print_service_process,), daemon=True)
