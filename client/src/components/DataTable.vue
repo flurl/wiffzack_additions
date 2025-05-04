@@ -1,7 +1,9 @@
 <script setup>
-import { computed } from 'vue'; // Removed ref, onMounted, inject
+import { computed, onUpdated } from 'vue'; // Removed ref, onMounted, inject
 import { useApiData } from '@/composables/useApiData'; // Adjust path if needed
 import Header from './Header.vue';
+
+import dragscroll from 'dragscroll';
 
 
 // --- Props ---
@@ -34,6 +36,10 @@ const {
     }
 });
 
+onUpdated(() => {
+    document.getElementsByTagName('body')[0].classList.add('dragscroll');
+    dragscroll.reset();
+});
 
 </script>
 
@@ -53,6 +59,7 @@ const {
     <div v-else>
         No data available for "{{ props.endpoint }}".
     </div>
+
 </template>
 
 <style scoped>

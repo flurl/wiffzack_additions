@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
+    "dragscroll": "^0.0.8",
     "sass": "^1.86.0",
     "sass-loader": "^16.0.5",
     "vite": "^6.2.1",
