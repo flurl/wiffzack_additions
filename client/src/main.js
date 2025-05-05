@@ -70,11 +70,24 @@ import { fas } from '@fortawesome/free-solid-svg-icons'
 /* add icons to the library */
 library.add(fas)
 
+// Import baseline default configuration.
+import { config as defConf } from './config.default.js';
+let config = defConf;
+try {
+  // Attempt to fetch optional client config from server root.
+  const response = await fetch("/config.client.json");
+  const conf = await response.json();
+  // Merge client config over defaults (shallow merge).
+  config = { ...config, ...conf };
+  console.log('Client config found.');
+} catch (error) {
+  // On error (404, network, bad JSON), use defaults.
+  console.log('No client config found, using defaults.');
+}
+
 const app = createApp(App)
 
-const config = { backendHost: 'http://localhost:5000' };
 app.provide('config', config);
-
 
 app.use(router)
 app.use(i18n)
