@@ -10,18 +10,37 @@ from tkinter import (
     Tk, Frame, Menubutton, Menu
 )
 
-# WEB_SERVER: LiteralString = "127.0.0.1:5000"
-# KIOSK_BROWSER_CMD: LiteralString = "chromium --kiosk --noerrdialogs --disable-infobars --enable-features=OverlayScrollbar "
+
+SCRIPT_DIR: Path = Path(__file__).resolve().parent
+DEFAULT_CONFIG_PATH: Path = SCRIPT_DIR / "config.default.toml"
+USER_CONFIG_DIR: Path = Path.home() / ".wiffzack_additions"
+USER_CONFIG_PATH: Path = USER_CONFIG_DIR / "config.client.toml"
 
 config: dict[str, Any] = {}
-with open("config.default.toml", "rb") as f:
-    config = tomllib.load(f)
 try:
-    with open(Path.home() / ".wiffzack_additions/config.client.toml", "rb") as f:
+    with open(DEFAULT_CONFIG_PATH, "rb") as f:
+        config = tomllib.load(f)
+except FileNotFoundError:
+    print(
+        f"Default configuration file not found at {DEFAULT_CONFIG_PATH}. Exiting.")
+    exit(1)  # Good to exit if default is missing too
+except tomllib.TOMLDecodeError as e:
+    print(
+        f"Error decoding default configuration file {DEFAULT_CONFIG_PATH}: {e}. Exiting.")
+    exit(1)
+
+try:
+    with open(USER_CONFIG_PATH, "rb") as f:
         config_user: dict[str, Any] = tomllib.load(f)
+        # This is fine if client.toml replaces whole sections like [client]
         config |= config_user
 except FileNotFoundError:
-    print("Client config not found. Please create a '~/.wiffzack_additions/config.client.toml' file.")
+    print(
+        f"Client config not found. Please create a '{USER_CONFIG_PATH}' file.")
+    exit(1)
+except tomllib.TOMLDecodeError as e:
+    print(
+        f"Error decoding user configuration file {USER_CONFIG_PATH}: {e}. Exiting.")
     exit(1)
 
 API_PATHS: dict[str, str] = {
