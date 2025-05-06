@@ -75,14 +75,14 @@ import { config as defConf } from './config.default.js';
 let config = defConf;
 try {
   // Attempt to fetch optional client config from server root.
-  const response = await fetch("/config.client.json");
+  const response = await fetch("/config.json");
   const conf = await response.json();
   // Merge client config over defaults (shallow merge).
   config = { ...config, ...conf };
-  console.log('Client config found.');
+  console.log('Config file found.');
 } catch (error) {
   // On error (404, network, bad JSON), use defaults.
-  console.log('No client config found, using defaults.');
+  console.log('No config file found, using defaults.');
 }
 
 const app = createApp(App)

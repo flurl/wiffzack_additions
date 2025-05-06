@@ -43,3 +43,4 @@ server/assets/init/*.csv
 .timetracker
 server/spool
 server/assets/messages
+client/public/config.json
