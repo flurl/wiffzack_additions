@@ -68,7 +68,7 @@ const printInvoice = () => {
                 </ul>
             </div>
             <div class="invoice-preview" v-if="currentInvoiceId">
-                <iframe class="invoice-iframe" :src="invoiceSrc" frameborder="0"></iframe>
+                <object class="invoice-preview-element" :data="invoiceSrc" type="text/html"></object>
                 <button class="print-invoice-btn" @click="printInvoice">{{ t('message.print') }}</button>
             </div>
         </div>
@@ -98,7 +98,7 @@ const printInvoice = () => {
     flex-direction: column;
 }
 
-.invoice-iframe {
+.invoice-preview-element {
     width: 100%;
     height: 100%;
 }
