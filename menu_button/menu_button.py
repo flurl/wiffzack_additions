@@ -153,7 +153,7 @@ class MenuButton(object):
             f"http://{WEB_SERVER}{API_PATHS['receipes']}")
 
     def open_browser(self, url: str) -> None:
-        subprocess.run(f"{KIOSK_BROWSER_CMD} '{url}'", shell=True)
+        subprocess.run(f"{KIOSK_BROWSER_CMD} \"{url}\"", shell=True)
 
     def dummyCmd(self) -> None:
         pass
