@@ -42,5 +42,6 @@ server/assets/init/*.csv
 
 .timetracker
 server/spool
-server/assets/messages
+server/assets/messages/*
+!server/assets/messages/README.md
 client/public/config.json
