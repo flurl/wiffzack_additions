@@ -34,7 +34,7 @@ def get_message(path: str) -> Message:
     if folder.is_dir():
         for file in folder.iterdir():
             if file.suffix in [".txt", ".html"]:
-                with open(file, "r") as f:
+                with open(file, "r", encoding="utf-8") as f:
                     content: str = f.read()
                 return Message(
                     path=folder.name,
