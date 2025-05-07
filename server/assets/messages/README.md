@@ -38,7 +38,7 @@ Each message requires its own dedicated sub-folder within the base directory.
   - `type`: `html`
 - **Content:** Write your HTML content directly into this `.html` file.
 - **Associated Assets (Images, CSS, etc.):**
-  - If your HTML message uses local images, CSS files, or other assets, place these files **inside the same message folder** (e.g., inside `server/assets/messages/new_feature/`).
+  - If your HTML message uses local images, CSS files, or other assets, place these files **inside the same message folder** (e.g., inside `server/assets/messages/new_feature/`). You may create a subfolder for these assets if needed.
   - You can then reference them using relative paths within your HTML (e.g., `<img src="promo_image.png">`). The server will serve these assets correctly.
 
 ---

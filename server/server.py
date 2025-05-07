@@ -332,8 +332,8 @@ def send_message(message_path: str) -> Response:
 
 
 @app.route("/message/html/<string:message_path>/", methods=["GET"])
-@app.route("/message/html/<string:message_path>/<string:file>", methods=["GET"])
-def send_html_message(message_path: str, file: str | None = None) -> Response:
+@app.route("/message/html/<string:message_path>/<path:path>", methods=["GET"])
+def send_html_message(message_path: str, path: str | None = None) -> Response:
     try:
         msg: messages.Message = messages.get_message(message_path)
         if msg.type != "html":
@@ -341,9 +341,9 @@ def send_html_message(message_path: str, file: str | None = None) -> Response:
     except FileNotFoundError:
         return jsonify({'success': False})
 
-    if file is None:
-        file = f"{msg.name}.{msg.type}"
-    return send_from_directory(messages.MESSAGEDIR / message_path, file)
+    if path is None:
+        path = f"{msg.name}.{msg.type}"
+    return send_from_directory(messages.MESSAGEDIR / message_path, path)
 
 
 @app.route("/api/recipe/list", methods=["GET"])
