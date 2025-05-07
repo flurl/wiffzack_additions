@@ -43,12 +43,12 @@ except tomllib.TOMLDecodeError as e:
         f"Error decoding user configuration file {USER_CONFIG_PATH}: {e}. Exiting.")
     exit(1)
 
-API_PATHS: dict[str, str] = {
-    "all_articles": "/api/artikel",
-    "sales": "/api/{client}/sales",
-    "tallied_articles": "/api/{client}/tallied_articles",
-    "latest_tallied_articles": "/api/{client}/latest_tallied_articles",
-    "wardrobe_sales": "/api/wardrobe_sales",
+FRONTEND_URLS: dict[str, str] = {
+    "all_articles": "/data_table/artikel",
+    "sales": "/data_table/{client}/sales",
+    "tallied_articles": "/data_table/{client}/tallied_articles",
+    "latest_tallied_articles": "/data_table/{client}/latest_tallied_articles",
+    "wardrobe_sales": "/data_table/wardrobe_sales",
     "messages": "/message/list",
     "invoices_dlg": "/invoices?terminal={client}",
     "receipes": "/data_table/recipe/list"
@@ -122,35 +122,35 @@ class MenuButton(object):
 
     def get_articles(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['all_articles']}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['all_articles']}")
 
     def get_sales(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['sales'].format(client=CLIENT_NAME)}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['sales'].format(client=CLIENT_NAME)}")
 
     def get_tallied_articles(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['tallied_articles'].format(client=CLIENT_NAME)}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['tallied_articles'].format(client=CLIENT_NAME)}")
 
     def get_latest_tallied_articles(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['latest_tallied_articles'].format(client=CLIENT_NAME)}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['latest_tallied_articles'].format(client=CLIENT_NAME)}")
 
     def get_wardrobe_sales(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['wardrobe_sales']}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['wardrobe_sales']}")
 
     def open_invoices_dlg(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['invoices_dlg'].format(client=CLIENT_NAME)}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['invoices_dlg'].format(client=CLIENT_NAME)}")
 
     def show_messages(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['messages']}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['messages']}")
 
     def show_receipes(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{API_PATHS['receipes']}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['receipes']}")
 
     def open_browser(self, url: str) -> None:
         subprocess.run(f"{KIOSK_BROWSER_CMD} \"{url}\"", shell=True)
