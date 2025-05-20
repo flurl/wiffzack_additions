@@ -98,9 +98,23 @@ class Database:
                 query: LiteralString = f"""update lager_details set lager_detail_istStand = 0 where lager_detail_lager = %s and lager_detail_artikel = %s"""
                 self.execute_query(query, (storage_id, storage_article_id))
 
+            query: LiteralString = """
+                select lager_einheit_multiplizierer from lager_einheiten, lager_artikel
+                where 1=1
+                and lager_einheit_id = lager_artikel_einheit
+                and lager_artikel_lagerartikel = %s
+            """
+            result: list[tuple[Any, ...]] | None = self.execute_query(
+                query,  (storage_article_id, ))
+            if result is None or len(result) == 0:
+                raise LookupError(
+                    f"No unit modifier found for storage article {storage_article_id}.")
+            unit_modifier: float = result[0][0]
+            print(f"{unit_modifier=}")
+
             query: LiteralString = f"""exec lager_update_stand %s, %s, %s"""
             self.execute_query(
-                query,  (article.id, storage_id, amount))
+                query,  (article.id, storage_id, amount*unit_modifier))
         except Exception as e:
             self.rollback()
             print(e)
@@ -161,9 +175,10 @@ class Database:
         """
 
         query: LiteralString = f"""
-            select artikel_id, artikel_bezeichnung, lager_detail_istStand
-            from artikel_basis, lager_artikel, lager_details
+            select artikel_id, artikel_bezeichnung, lager_detail_istStand/lager_einheit_multiplizierer
+            from artikel_basis, lager_artikel, lager_details, lager_einheiten
             where 1=1
+            and lager_einheit_id = lager_artikel_einheit
             and artikel_id = lager_artikel_artikel
             and lager_detail_lager = %s
             and lager_detail_artikel = lager_artikel_lagerartikel
@@ -202,9 +217,10 @@ class Database:
 
     def get_articles_in_storage(self, storage_id: int, article_group_id: int | None = None) -> list[tuple[Any, ...]] | None:
         query: LiteralString = f"""
-            select artikel_id, artikel_bezeichnung, lager_detail_istStand
-            from artikel_basis, lager_artikel, lager_details
+            select artikel_id, artikel_bezeichnung, lager_detail_istStand/lager_einheit_multiplizierer
+            from artikel_basis, lager_artikel, lager_details, lager_einheiten
             where 1=1
+            and lager_einheit_id = lager_artikel_einheit
             and artikel_id = lager_artikel_artikel
             and lager_detail_artikel = lager_artikel_lagerartikel
             and lager_detail_lager = %s
