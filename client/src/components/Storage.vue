@@ -310,7 +310,7 @@ const exit = (success) => {
                             :style="{ backgroundColor: stringToColor(activeArticleGroup[1]).bg, color: stringToColor(activeArticleGroup[1]).fg }">
                             {{ article.name }}
                         </button>
-                        <p>{{ article.amount ? article.amount : '-' }}</p>
+                        <p>{{ article.amount ? article.amount.toFixed(2) : '-' }}</p>
                     </div>
                 </template>
             </div>
