@@ -413,7 +413,7 @@ def start_print_service() -> subprocess.Popen[bytes]:
     global print_service_process
     logger.info("Starting print service")
     print_service_process = subprocess.Popen(
-        [sys.executable, "print_service.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        [sys.executable, "print_service.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
     return print_service_process
 
 
