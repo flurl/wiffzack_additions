@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import ArticleList from './ArticleList.vue'
 import ModalDialog from './ModalDialog.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
+import QuitButton from './QuitButton.vue'
 import { useStorageData } from '../composables/useStorageData';
 import { useColor } from '../utils/useColor';
 const { stringToColor, colorIsDarkSimple } = useColor();
@@ -277,7 +278,7 @@ const exit = (success) => {
             <a class="button left"
                 :href="`?terminal=${$terminalConfig.name}&sourceStorageId=${destinationStorage.id}&destinationStorageId=${sourceStorage.id}`">⇄</a>
             <button class="button right" v-if="props.mode === 'stock'" @click="onInitClicked">Init</button>
-            <button class="button" @click="exit(true)">Quit</button>
+            <QuitButton />
         </header>
 
         <div class="amount-selector">
@@ -338,13 +339,6 @@ const exit = (success) => {
     display: flex;
     /* justify-content: space-between; */
     align-items: center;
-
-    .button {
-        font-size: 200%;
-        padding: 0;
-    }
-
-    /* .left {} */
 
     .right {
         margin-left: auto;
