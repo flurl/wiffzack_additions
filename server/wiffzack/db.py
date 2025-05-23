@@ -223,6 +223,7 @@ class Database:
             and lager_einheit_id = lager_artikel_einheit
             and artikel_id = lager_artikel_artikel
             and lager_detail_artikel = lager_artikel_lagerartikel
+            and lager_detail_istStand > 0.0
             and lager_detail_lager = %s
         """
         params: tuple[int, ...] = (storage_id,)

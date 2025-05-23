@@ -38,6 +38,7 @@ except KeyError as e:
     exit(1)
 except Exception as e:
     logger.error(f"CRITICAL: Failed to connect to database: {e}. Exiting.")
+    logger.debug(f"Used config: {config}")
     exit(1)
 
 # --- Static File Configuration ---
@@ -198,11 +199,15 @@ def get_storage_name(storage_id: int) -> Response:
     return mk_response(result)
 
 
+@app.route("/api/get_config", methods=["GET"])
 @app.route("/api/get_config/<string:terminal_id>", methods=["GET"])
-def get_config(terminal_id: str) -> Response:
+def get_config(terminal_id: str | None = None) -> Response:
     logger.debug(config)
     try:
-        return jsonify({'success': True, 'config': config["terminal_config"][terminal_id]})
+        if terminal_id is None:
+            return jsonify({'success': True, 'config': config["terminal_config"]})
+        else:
+            return jsonify({'success': True, 'config': config["terminal_config"][terminal_id]})
     except KeyError:
         return jsonify({'success': False})
 

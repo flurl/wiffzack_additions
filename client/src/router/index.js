@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router'
 import DataTable from '../components/DataTable.vue'
 import Storage from '../components/Storage.vue'
+import StorageSelection from '@/components/StorageSelection.vue'
 import MessageList from '../components/MessageList.vue'
 import MessageView from '../components/MessageView.vue'
 import InvoicePrintDialog from '../components/InvoicePrintDialog.vue'
@@ -17,6 +18,12 @@ const router = createRouter({
       name: 'data_table',
       component: DataTable,
       props: true,
+    },
+    {
+      path: '/storage/selection',
+      name: 'storage_selection',
+      component: StorageSelection,
+      props: false,
     },
     {
       path: '/storage/:mode',
