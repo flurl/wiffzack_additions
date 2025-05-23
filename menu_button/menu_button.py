@@ -106,9 +106,9 @@ class MenuButton(object):
 
         systemMenu: Menu = Menu(self.menu)
         systemMenu.add_command(label='Logout', underline=0,
-                               command=self.dummyCmd, font=("Helvetica", 18, "bold"))
+                               command=self.logout, font=("Helvetica", 18, "bold"))
         systemMenu.add_command(label='Reboot', underline=0,
-                               command=self.dummyCmd, font=("Helvetica", 18, "bold"))
+                               command=self.reboot, font=("Helvetica", 18, "bold"))
         self.menu.add_cascade(label='System', menu=systemMenu,
                               underline=0, font=("Helvetica", 18, "bold"))
 
@@ -154,6 +154,12 @@ class MenuButton(object):
 
     def open_browser(self, url: str) -> None:
         subprocess.run(f"{KIOSK_BROWSER_CMD} \"{url}\"", shell=True)
+
+    def logout(self) -> None:
+        os.system("shutdown -l")
+
+    def reboot(self) -> None:
+        os.system("shutdown -r")
 
     def dummyCmd(self) -> None:
         pass
