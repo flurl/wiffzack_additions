@@ -107,7 +107,9 @@ onUnmounted(() => {
                         {{ name }}
                         <span v-if="highlightStatus[name]" class="highlight-indicator"
                             title="Items in request storage">⚠️</span>
-                    </a>
+                    </a>&nbsp;&nbsp;&nbsp;
+                    <a :href="`/storage/stock?terminal=lager&sourceStorageId=0&destinationStorageId=${conf.storage_id}`"
+                        target="_blank`"> ==></a>
                 </td>
             </tr>
         </tbody>
