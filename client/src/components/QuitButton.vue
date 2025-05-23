@@ -2,7 +2,7 @@
 
 const exit = () => {
     window.close();
-    alert('The window should be closed now. But if you can read this it propably didn\'t work as expected.')
+    //alert('The window should be closed now. But if you can read this it propably didn\'t work as expected.')
 }
 
 </script>
