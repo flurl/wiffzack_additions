@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 import step
 
 from lib.EscPos.EscPosHTMLParser import EscPosHTMLParser
+from lib.config import ConfigLoader
 import wiffzack as wz
 from wiffzack.types import DBResult
 
@@ -259,13 +260,22 @@ class PrintService:
 
 
 if __name__ == "__main__":
-    import tomllib
-    with open("config.toml", "rb") as f:
-        config: dict[str, Any] = tomllib.load(f)
-    wz.db.connect_to_database(config["database"]["server"],
-                              config["database"]["username"],
-                              config["database"]["password"],
-                              config["database"]["database"])
+    config_loader = ConfigLoader()
+    config: dict[str, Any] = config_loader.config
+    try:
+        wz.db.connect_to_database(config["database"]["server"],
+                                  config["database"]["username"],
+                                  config["database"]["password"],
+                                  config["database"]["database"])
+    except KeyError as e:
+        logger.error(
+            f"CRITICAL: Missing database configuration key: {e}. Check your config.toml. Exiting.")
+        exit(1)
+    except Exception as e:
+        logger.error(f"CRITICAL: Failed to connect to database: {e}. Exiting.")
+        logger.debug(f"Used config: {config}")
+        exit(1)
+
     import logging.config
     logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
     logger.info("Starting print service")
