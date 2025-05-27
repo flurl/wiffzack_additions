@@ -153,7 +153,13 @@ class MenuButton(object):
             f"http://{WEB_SERVER}{FRONTEND_URLS['receipes']}")
 
     def open_browser(self, url: str) -> None:
+        # allow newly opened window to become the top window
+        if os.name == 'nt':
+            root.wm_attributes("-topmost", 0)
         subprocess.run(f"{KIOSK_BROWSER_CMD} \"{url}\"", shell=True)
+        # enable always on top again
+        if os.name == 'nt':
+            root.wm_attributes("-topmost", 1)
 
     def logout(self) -> None:
         os.system("shutdown -l")
@@ -168,9 +174,10 @@ class MenuButton(object):
 if __name__ == '__main__':
     root: Tk = Tk()
 
+    # always on top only on windows
     if os.name == 'nt':
         root.wm_attributes("-topmost", 1)
-    # root.overrideredirect(1)
+    root.overrideredirect(True)
     root.geometry('100x50+0+350')
 
     app: MenuButton = MenuButton(root)
