@@ -45,3 +45,5 @@ server/spool
 server/assets/messages/*
 !server/assets/messages/README.md
 client/public/config.json
+server/print_templates/*
+!server/print_templates/example.html
