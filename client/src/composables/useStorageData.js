@@ -1,11 +1,12 @@
 // useStorageData.js
-import { ref, onMounted, inject } from 'vue';
+import { ref, onMounted, inject, watch } from 'vue';
 import axios from 'axios';
 
 export function useStorageData(sourceStorageId, destinationStorageId, mode) {
     const config = inject('config');
-    const sourceStorage = ref({ id: sourceStorageId, name: null });
-    const destinationStorage = ref({ id: destinationStorageId, name: null });
+    // Initialize internal storage refs with the .value of the passed-in refs
+    const sourceStorage = ref({ id: sourceStorageId.value, name: null });
+    const destinationStorage = ref({ id: destinationStorageId.value, name: null });
     const articles = ref({});
     const articleGroups = ref([]);
     const destStorageArticles = ref({});
@@ -44,6 +45,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
     const getArticlesInDestinationStorage = async () => {
         loading.value = true;
         error.value = null;
+        destStorageArticles.value = {}; // Clear previous articles
         try {
             const response = await axios.get(`${config.backendHost}/api/get_articles_in_storage/${destinationStorage.value.id}`);
             response.data.data.forEach(art => {
@@ -137,6 +139,21 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
             return true;
         }
     }
+
+    // Watch for changes in the passed-in sourceStorageId reference
+    watch(sourceStorageId, async (newId) => {
+        sourceStorage.value.id = newId; // Update internal id
+        await getStorageName(sourceStorage, newId);
+        await getArticleGroups(); // Re-fetch article groups as they might depend on the source
+        await getArticlesInSourceStorage(); // Re-fetch articles for the new source
+    });
+
+    // Watch for changes in the passed-in destinationStorageId reference
+    watch(destinationStorageId, async (newId) => {
+        destinationStorage.value.id = newId; // Update internal id
+        await getStorageName(destinationStorage, newId);
+        await getArticlesInDestinationStorage(); // Re-fetch articles/details for the new destination
+    });
 
     onMounted(async () => {
         if (sourceStorage.value.id) {

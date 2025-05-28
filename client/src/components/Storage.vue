@@ -24,25 +24,26 @@ const props = defineProps({
 });
 
 
-let sourceStorageId = null;
-let destinationStorageId = null;
+const sourceStorageId = ref(null);
+const destinationStorageId = ref(null);
+
 if (props.mode === "request") {
-    sourceStorageId = null;
-    destinationStorageId = $terminalConfig.request_storage_id;
+    sourceStorageId.value = null;
+    destinationStorageId.value = $terminalConfig.request_storage_id;
 } else if (props.mode === "distribute") {
-    sourceStorageId = $destTerminalConfig.request_storage_id;
-    destinationStorageId = $destTerminalConfig.transfer_storage_id;
+    sourceStorageId.value = $destTerminalConfig.request_storage_id;
+    destinationStorageId.value = $destTerminalConfig.transfer_storage_id;
 } else if (props.mode === "transfer") {
-    sourceStorageId = $terminalConfig.transfer_storage_id;
-    destinationStorageId = $terminalConfig.storage_id;
+    sourceStorageId.value = $terminalConfig.transfer_storage_id;
+    destinationStorageId.value = $terminalConfig.storage_id;
 } else if (props.mode === "stock") {
-    sourceStorageId = $terminalConfig.storage_id;
-    destinationStorageId = $terminalConfig.transfer_storage_id;
+    sourceStorageId.value = $terminalConfig.storage_id;
+    destinationStorageId.value = $terminalConfig.transfer_storage_id;
 }
 // check if the source and/or destination storage is overwritten manually
 const urlParams = new URLSearchParams(window.location.search);
-sourceStorageId = urlParams.has('sourceStorageId') ? urlParams.get('sourceStorageId') : sourceStorageId;
-destinationStorageId = urlParams.has('destinationStorageId') ? urlParams.get('destinationStorageId') : destinationStorageId;
+sourceStorageId.value = urlParams.has('sourceStorageId') ? urlParams.get('sourceStorageId') : sourceStorageId.value;
+destinationStorageId.value = urlParams.has('destinationStorageId') ? urlParams.get('destinationStorageId') : destinationStorageId.value;
 
 
 const {
@@ -83,6 +84,17 @@ const amount = computed(() => {
     }
     return _amount.value;
 });
+
+
+const swapStorage = () => {
+    const tmp = sourceStorageId.value;
+    sourceStorageId.value = destinationStorageId.value;
+    destinationStorageId.value = tmp;
+    // These calls might become redundant if useStorageData internally watches the ID refs
+    // and re-fetches data automatically. If not, they are an attempt to manually refresh.
+    getArticlesInSourceStorage();
+    getArticlesInDestinationStorage();
+}
 
 
 const destDisplayArticles = computed(() => {
@@ -275,8 +287,7 @@ const exit = (success) => {
 
         <header class="header">
             <h1 class="left">{{ sourceStorage.name }} -> {{ destinationStorage.name }}</h1>
-            <a class="button left"
-                :href="`?terminal=${$terminalConfig.name}&sourceStorageId=${destinationStorage.id}&destinationStorageId=${sourceStorage.id}`">⇄</a>
+            <a class="button left" @click="swapStorage">⇄</a>
             <button class="button right" v-if="props.mode === 'stock'" @click="onInitClicked">Init</button>
             <QuitButton />
         </header>
