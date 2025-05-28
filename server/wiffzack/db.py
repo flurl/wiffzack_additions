@@ -215,7 +215,7 @@ class Database:
             query, (storage_id,))
         return rows
 
-    def get_articles_in_storage(self, storage_id: int, article_group_id: int | None = None) -> list[tuple[Any, ...]] | None:
+    def get_articles_in_storage(self, storage_id: int, article_group_id: int | None = None, show_not_in_stock: bool = False) -> list[tuple[Any, ...]] | None:
         query: LiteralString = f"""
             select artikel_id, artikel_bezeichnung, lager_detail_istStand/lager_einheit_multiplizierer
             from artikel_basis, lager_artikel, lager_details, lager_einheiten
@@ -223,13 +223,15 @@ class Database:
             and lager_einheit_id = lager_artikel_einheit
             and artikel_id = lager_artikel_artikel
             and lager_detail_artikel = lager_artikel_lagerartikel
-            and lager_detail_istStand > 0.0
             and lager_detail_lager = %s
         """
         params: tuple[int, ...] = (storage_id,)
         if article_group_id is not None:
             query += f" and artikel_gruppe = %s"
             params = (storage_id, article_group_id)
+
+        if not show_not_in_stock:
+            query += f" and lager_detail_istStand > 0.001"
 
         rows: list[tuple[Any, ...]] | None = self.execute_query(query, params)
         return rows

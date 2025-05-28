@@ -321,7 +321,8 @@ const exit = (success) => {
                             :style="{ backgroundColor: stringToColor(activeArticleGroup[1]).bg, color: stringToColor(activeArticleGroup[1]).fg }">
                             {{ article.name }}
                         </button>
-                        <p>{{ article.amount ? article.amount.toFixed(2) : '-' }}</p>
+                        <p :class="[article.amount < 0 ? 'negative' : 'positive']">{{ Math.abs(article.amount) > 0.001 ?
+                            article.amount.toFixed(2) : '-' }}</p>
                     </div>
                 </template>
             </div>
@@ -377,6 +378,15 @@ div.article-button {
 
     p {
         text-align: center;
+
+        &.negative {
+            color: red;
+            font-weight: bold;
+        }
+
+        &.positive {
+            color: green;
+        }
     }
 }
 

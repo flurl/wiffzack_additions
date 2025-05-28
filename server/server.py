@@ -185,9 +185,12 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
 @app.route("/api/get_articles_in_storage/<int:storage_id>", methods=["GET"])
 @app.route("/api/get_articles_in_storage/<int:storage_id>/article_group/<int:article_group_id>", methods=["GET"])
 def get_articles_in_storage(storage_id: int, article_group_id: int | None = None) -> Response:
-    logger.debug(storage_id)
+    show_not_in_stock: bool = True if request.args.get(
+        "show_not_in_stock") == "1" else False
+    logger.debug(
+        f"Fetching articles for storage_id: {storage_id}, article_group_id: {article_group_id}, show_not_in_stock: {show_not_in_stock}")
     result: DBResult = wz.db.get_articles_in_storage(
-        storage_id, article_group_id)
+        storage_id, article_group_id, show_not_in_stock)
     logger.debug(result)
     return mk_response(result)
 

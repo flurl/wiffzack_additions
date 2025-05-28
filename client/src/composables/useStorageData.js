@@ -71,6 +71,10 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         } else if (mode === "distribute" || mode === "transfer" || mode === "stock") {
             url = `${config.backendHost}/api/get_articles_in_storage/${sourceStorage.value.id}/article_group/${activeArticleGroup.value[0]}`;
         }
+        if (mode === "stock") {
+            url = url + "?show_not_in_stock=1";
+        }
+
         try {
             const response = await axios.get(url);
             articles.value = {};
