@@ -10,7 +10,7 @@ defineEmits(['articleRemoved']);
         <table class="article-list ">
             <template v-for="article in props.articles">
                 <tr v-if="article.amount > 0">
-                    <td class="amount">{{ article.amount }}</td>
+                    <td class="amount">{{ article.amount.toFixed(2) }}</td>
                     <td class="name">{{ article.name }}</td>
                     <td class="buttons"><button class="cancel" @click="$emit('articleRemoved', article)">
                             <span class="icon">
@@ -32,10 +32,8 @@ defineEmits(['articleRemoved']);
 </template>
 
 <style scoped>
-
 button {
     padding: 0.5em;
     min-width: 0;
 }
-
 </style>

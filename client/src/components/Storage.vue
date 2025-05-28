@@ -355,6 +355,10 @@ const exit = (success) => {
     .right {
         margin-left: auto;
     }
+
+    h1 {
+        font-size: 140%
+    }
 }
 
 .amount-selector {
@@ -396,7 +400,7 @@ button.article-group {
     white-space: normal;
     word-break: break-all;
     height: 3lh;
-    padding: 0.5em;
+    padding: 0 0.5em;
     overflow: hidden;
     vertical-align: top;
     /* needed to align buttons when text overflows */
@@ -422,10 +426,11 @@ button.confirm {
     height: calc(100% - 4rem);
     width: 100%;
     overflow: scroll;
+    font-weight: bold;
 
     table {
         tr:nth-child(odd) {
-            background-color: color.scale($light-button-background, $lightness: -30%);
+            background-color: color.scale($light-button-background, $lightness: +30%);
             ;
         }
 
