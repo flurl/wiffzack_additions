@@ -242,6 +242,10 @@ class Database:
             query, (storage_id,))
         return rows
 
+    """********************
+    ** SALES
+    ********************"""
+
     def get_client_sales(self, client: str) -> DBResult:
         query: LiteralString = f"""
             SELECT rechnung_kellnerKurzName, ROUND(SUM(rechnung_detail_preis * rechnung_detail_menge), 2) AS total_sales
@@ -254,10 +258,6 @@ class Database:
         """
         rows: DBResult = self.execute_query(query, (client,))
         return rows
-
-    """********************
-    ** SALES
-    ********************"""
 
     def get_tallied_articles(self, client: str) -> DBResult:
         query: LiteralString = f"""
