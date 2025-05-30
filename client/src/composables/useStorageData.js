@@ -2,11 +2,12 @@
 import { ref, onMounted, inject, watch } from 'vue';
 import axios from 'axios';
 
-export function useStorageData(sourceStorageId, destinationStorageId, mode) {
+export function useStorageData(sourceStorageId, destinationStorageId, transferStorageId, mode) {
     const config = inject('config');
     // Initialize internal storage refs with the .value of the passed-in refs
     const sourceStorage = ref({ id: sourceStorageId.value, name: null });
     const destinationStorage = ref({ id: destinationStorageId.value, name: null });
+    const transferStorage = ref({ id: transferStorageId.value, name: null });
     const articles = ref({});
     const articleGroups = ref([]);
     const destStorageArticles = ref({});
@@ -144,6 +145,29 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         }
     }
 
+    const emptyTransferStorage = async () => {
+        loading.value = true;
+        error.value = null;
+        let url = "";
+        url = `${config.backendHost}/api/empty_storage/${transferStorage.value.id}`
+
+        try {
+            const response = await axios.get(url);
+            console.log(response);
+        } catch (err) {
+            console.log(err);
+            error.value = err;
+        } finally {
+            loading.value = false;
+        }
+
+        if (error.value) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
     // Watch for changes in the passed-in sourceStorageId reference
     watch(sourceStorageId, async (newId) => {
         sourceStorage.value.id = newId; // Update internal id
@@ -184,6 +208,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, mode) {
         getArticlesInSourceStorage,
         putIntoStorage,
         setInitInventory,
+        emptyTransferStorage,
         loading,
         error
     };

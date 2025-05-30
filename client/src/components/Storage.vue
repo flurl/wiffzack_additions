@@ -26,6 +26,7 @@ const props = defineProps({
 
 const sourceStorageId = ref(null);
 const destinationStorageId = ref(null);
+const transferStorageId = ref(null);
 
 if (props.mode === "request") {
     sourceStorageId.value = null;
@@ -40,6 +41,8 @@ if (props.mode === "request") {
     sourceStorageId.value = $terminalConfig.storage_id;
     destinationStorageId.value = $terminalConfig.transfer_storage_id;
 }
+transferStorageId.value = $terminalConfig.transfer_storage_id;
+
 // check if the source and/or destination storage is overwritten manually
 const urlParams = new URLSearchParams(window.location.search);
 sourceStorageId.value = urlParams.has('sourceStorageId') ? urlParams.get('sourceStorageId') : sourceStorageId.value;
@@ -58,9 +61,10 @@ const {
     getArticlesInSourceStorage,
     putIntoStorage,
     setInitInventory,
+    emptyTransferStorage,
     loading,
     error
-} = useStorageData(sourceStorageId, destinationStorageId, props.mode);
+} = useStorageData(sourceStorageId, destinationStorageId, transferStorageId, props.mode);
 watch(activeArticleGroup, getArticlesInSourceStorage);
 
 
@@ -197,7 +201,8 @@ const onInitClicked = () => {
         "",
         { ok: true, cancel: true },
         async () => {
-            if (await setInitInventory()) {
+            if (await setInitInventory()
+                && await emptyTransferStorage()) {
                 showModal(t('message.init_stock_success'),
                     "",
                     { ok: true, cancel: false },

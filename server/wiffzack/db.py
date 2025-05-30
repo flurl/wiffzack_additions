@@ -242,6 +242,15 @@ class Database:
             query, (storage_id,))
         return rows
 
+    def empty_storage(self, storage_id: int) -> None:
+        query: LiteralString = f"""
+            update lager_details
+            set lager_detail_istStand = 0
+            where lager_detail_lager = %s
+        """
+        self.execute_query(query, (storage_id,))
+        self.commit()
+
     """********************
     ** SALES
     ********************"""

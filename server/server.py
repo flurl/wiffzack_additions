@@ -182,6 +182,12 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
     return jsonify({'success': True})
 
 
+@app.route("/api/empty_storage/<int:storage_id>", methods=["GET"])
+def empty_storage(storage_id: int) -> Response:
+    wz.db.empty_storage(storage_id)
+    return jsonify({'success': True})
+
+
 @app.route("/api/get_articles_in_storage/<int:storage_id>", methods=["GET"])
 @app.route("/api/get_articles_in_storage/<int:storage_id>/article_group/<int:article_group_id>", methods=["GET"])
 def get_articles_in_storage(storage_id: int, article_group_id: int | None = None) -> Response:
