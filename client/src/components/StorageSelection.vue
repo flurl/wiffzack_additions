@@ -94,11 +94,6 @@ onUnmounted(() => {
     <div v-if="isLoading" class="loading-message">Loading terminal configurations...</div>
     <div v-else-if="error" class="error-message">Error loading configurations: {{ error.message }}</div>
     <table v-else-if="terminalConfigData && Object.keys(terminalConfigData).length > 0" class="terminal-table">
-        <thead>
-            <tr>
-                <th>Terminal Name</th>
-            </tr>
-        </thead>
         <tbody>
             <tr v-for="(conf, name) in terminalConfigData" :key="name"
                 :class="{ 'highlight-request': highlightStatus[name] }">
