@@ -1,56 +1,56 @@
-from typing import Any, LiteralString, NoReturn, cast
+from typing import Any, LiteralString, cast
 import pymssql
-import threading
-import queue
 
-from .types import Article, StorageModifier, QueryQueueItem, ResultQueueItem, DBResult
+from .types import Article, StorageModifier, DBResult
 
 
 class Database:
     def __init__(self) -> None:
-        self.query_queue: queue.Queue[QueryQueueItem] = queue.Queue()
         self.connection: pymssql.Connection | None = None
         self.cursor: pymssql.Cursor | None = None
-        self.worker_thread = threading.Thread(
-            target=self._query_worker, daemon=True)
-        self.worker_thread.start()
 
     def connect_to_database(self, server: str, username: str, password: str, database: str) -> None:
+        print(f"Connecting to database {database} on {server}")
+        """Establishes a connection to the database."""
         self.connection = pymssql.connect(server=server, user=username,
                                           password=password, database=database, tds_version=r"7.0")
+        if not self.connection:
+            raise ConnectionError(
+                f"Failed to connect to database {database} on {server}")
         self.cursor = self.connection.cursor()
+        if not self.cursor:
+            raise ConnectionError(
+                "Failed to create a cursor for the database connection.")
 
-    def _query_worker(self) -> NoReturn:
-        """Worker thread to process queries sequentially."""
-        while True:
-            qqi: QueryQueueItem = self.query_queue.get()
-            query: LiteralString = qqi.query
-            params: tuple[Any, ...] = qqi.params
-            result_queue: queue.Queue[ResultQueueItem] = qqi.result_queue
-            assert self.cursor is not None, "Cursor is not initialized."
-            try:
-                self.cursor.execute(query, params)
-                try:
-                    result: list[tuple[Any, ...]
-                                 ] | None = self.cursor.fetchall()
-                except pymssql.OperationalError:
-                    # Statement not executed or executed statement has no resultset
-                    result = None
-                result_queue.put(ResultQueueItem(result))
-            except Exception as e:
-                print(f"Error executing query: {e}")
-                result_queue.put(ResultQueueItem(None))  # Signal error
-            finally:
-                self.query_queue.task_done()
+    def close(self) -> None:
+        """Closes the database connection and cursor."""
+        if self.cursor:
+            self.cursor.close()
+            self.cursor = None
+        if self.connection:
+            self.connection.close()
+            self.connection = None
 
     def execute_query(self, query: LiteralString, params: tuple[Any, ...] = ()) -> list[tuple[Any, ...]] | None:
-        """Executes a SQL query and returns the result, using the query queue."""
-        local_result_queue: queue.Queue[ResultQueueItem] = queue.Queue()
-        self.query_queue.put(QueryQueueItem(query, params, local_result_queue))
-        result: ResultQueueItem = local_result_queue.get()
-        if result.result is None:
-            print(f"Error: Query result is None for query: {query}")
-        return result.result
+        """Executes a SQL query and returns the result."""
+        if self.cursor is None:
+            raise ConnectionError(
+                "Database cursor is not initialized. Call connect_to_database first.")
+        try:
+            self.cursor.execute(query, params)
+            try:
+                return self.cursor.fetchall()
+            # Handles cases where statement has no resultset (e.g. INSERT, UPDATE)
+            except pymssql.OperationalError:
+                return None
+            except Exception as e:
+                print(
+                    f"Error fetching results for query: {query} with params: {params}. Error: {e}")
+                raise
+        except Exception as e:
+            print(
+                f"Error executing query: {query} with params: {params}. Error: {e}")
+            raise
 
     def commit(self) -> None:
         assert self.connection is not None, "Connection is not initialized."
@@ -381,6 +381,3 @@ class Database:
         """
         rows: DBResult = self.execute_query(query)
         return rows
-
-
-db: Database = Database()

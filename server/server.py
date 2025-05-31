@@ -10,11 +10,10 @@ from typing import Any, Iterable, LiteralString, NoReturn
 import csv
 import threading
 
-from flask import Flask, jsonify, make_response, render_template, request, send_from_directory
+from flask import Flask, jsonify, make_response, render_template, request, send_from_directory, g
 from flask_cors import CORS
 from werkzeug.wrappers import Response
-
-import wiffzack as wz
+from wiffzack import Database
 from wiffzack.types import Article, StorageModifier, DBResult
 import lib.messages as messages
 from lib.config import ConfigLoader
@@ -26,21 +25,6 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 print_service_process: subprocess.Popen[bytes]
 
-
-try:
-    wz.db.connect_to_database(config["database"]["server"],
-                              config["database"]["username"],
-                              config["database"]["password"],
-                              config["database"]["database"])
-except KeyError as e:
-    logger.error(
-        f"CRITICAL: Missing database configuration key: {e}. Check your config.toml. Exiting.")
-    exit(1)
-except Exception as e:
-    logger.error(f"CRITICAL: Failed to connect to database: {e}. Exiting.")
-    logger.debug(f"Used config: {config}")
-    exit(1)
-
 # --- Static File Configuration ---
 # Calculate the path to the 'dist' directory relative to this script (server.py)
 # Go up one level from 'server/' to the project root, then into 'client/dist/'
@@ -50,6 +34,36 @@ STATIC_FOLDER: Path = Path(
 app = Flask(__name__)
 # Limit CORS to API routes if needed
 CORS(app, resources={r'/api/*': {'origins': '*'}})
+
+# --- Database Connection Management ---
+
+
+def get_db() -> Database:
+    """Opens a new database connection if there is none yet for the current application context."""
+    if 'db' not in g:
+        g.db = Database()
+        try:
+            g.db.connect_to_database(
+                config["database"]["server"],
+                config["database"]["username"],
+                config["database"]["password"],
+                config["database"]["database"]
+            )
+        except KeyError as e:
+            logger.error(
+                f"CRITICAL: Missing database configuration key: {e}. Check your config.toml.")
+            raise  # Re-raise to halt app or be caught by Flask error handlers
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to connect to database: {e}.")
+            raise
+    return g.db
+
+
+@app.teardown_appcontext
+def teardown_db(exception: BaseException | None = None) -> None:
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 
 @app.route('/api/<string:client>/sales', methods=['GET'])
@@ -70,24 +84,24 @@ def get_sales(client: str) -> Response:
     - Response: A JSON response containing the aggregated total sales
       data grouped by the waiter's short name.
     """
-
-    result: DBResult = wz.db.get_client_sales(client)
+    db: Database = get_db()
+    result: DBResult = db.get_client_sales(client)
     return mk_response(result, "sales")
 
 
 @app.route('/api/<string:client>/tallied_articles', methods=['GET'])
 def get_tallied_articles(client: str) -> Response:
-    return mk_response(wz.db.get_tallied_articles(client), "Tallied articles")
+    return mk_response(get_db().get_tallied_articles(client), "Tallied articles")
 
 
 @app.route('/api/<string:client>/latest_tallied_articles', methods=['GET'])
 def get_latest_tallied_articles(client: str) -> Response:
-    return mk_response(wz.db.get_latest_tallied_articles(client), "Latest")
+    return mk_response(get_db().get_latest_tallied_articles(client), "Latest")
 
 
 @app.route('/api/wardrobe_sales', methods=['GET'])
 def get_wardrobe_sales() -> Response:
-    result: DBResult = wz.db.get_wardrobe_sales()
+    result: DBResult = get_db().get_wardrobe_sales()
     return mk_response(result, "Wardrobe Sales")
 
 
@@ -96,23 +110,24 @@ def get_articles() -> Response:
     query: LiteralString = f"""
     select artikel_id, artikel_bezeichnung, artikel_ep from artikel_basis
     """
-    rows: DBResult = wz.db.execute_query(query)
+    rows: DBResult = get_db().execute_query(query)
     return mk_response(rows)
 
 
 @app.route('/api/storage_article_groups', methods=['GET'])
 @app.route('/api/storage_article_groups/<int:storage_id>', methods=['GET'])
 def get_storage_article_groups(storage_id: int | None = None) -> Response:
+    db: Database = get_db()
     if storage_id is None:
-        result: DBResult = wz.db.get_all_storage_article_groups()
+        result: DBResult = db.get_all_storage_article_groups()
     else:
-        result: DBResult = wz.db.get_article_groups_in_storage(storage_id)
+        result: DBResult = db.get_article_groups_in_storage(storage_id)
     return mk_response(result)
 
 
 @app.route('/api/storage_article_by_group/<int:group>', methods=['GET'])
 def get_article_by_group(group: int) -> Response:
-    result: DBResult = wz.db.get_storage_articles_by_group(group)
+    result: DBResult = get_db().get_storage_articles_by_group(group)
     return mk_response(result)
 
 
@@ -147,6 +162,7 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
     - Response: A JSON response indicating the success or failure of the operation.
       {'success': True} or {'success': False}
     """
+    db: Database = get_db()
     articles: Any | None = request.json
     absolute: bool = True if request.args.get(
         "method") == "absolute" else False
@@ -162,7 +178,7 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
                 sm: StorageModifier = StorageModifier(article=Article(article["id"], article["name"]),
                                                       storage_id=from_storage_id,
                                                       amount=article["amount"])
-                wz.db.withdraw_article_from_storage(sm, absolute=absolute)
+                db.withdraw_article_from_storage(sm, absolute=absolute)
         except Exception as e:
             print(repr(e))
             return jsonify({'success': False})
@@ -174,7 +190,7 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
                 sm: StorageModifier = StorageModifier(article=Article(article["id"], article["name"]),
                                                       storage_id=to_storage_id,
                                                       amount=article["amount"])
-                wz.db.add_article_to_storage(sm, absolute=absolute)
+                db.add_article_to_storage(sm, absolute=absolute)
         except Exception as e:
             print(e)
             return jsonify({'success': False})
@@ -184,7 +200,7 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
 
 @app.route("/api/empty_storage/<int:storage_id>", methods=["GET"])
 def empty_storage(storage_id: int) -> Response:
-    wz.db.empty_storage(storage_id)
+    get_db().empty_storage(storage_id)
     return jsonify({'success': True})
 
 
@@ -195,7 +211,7 @@ def get_articles_in_storage(storage_id: int, article_group_id: int | None = None
         "show_not_in_stock") == "1" else False
     logger.debug(
         f"Fetching articles for storage_id: {storage_id}, article_group_id: {article_group_id}, show_not_in_stock: {show_not_in_stock}")
-    result: DBResult = wz.db.get_articles_in_storage(
+    result: DBResult = get_db().get_articles_in_storage(
         storage_id, article_group_id, show_not_in_stock)
     logger.debug(result)
     return mk_response(result)
@@ -203,7 +219,7 @@ def get_articles_in_storage(storage_id: int, article_group_id: int | None = None
 
 @app.route("/api/get_storage_name/<int:storage_id>", methods=["GET"])
 def get_storage_name(storage_id: int) -> Response:
-    result: DBResult = wz.db.get_storage_name(storage_id)
+    result: DBResult = get_db().get_storage_name(storage_id)
     logger.debug(result)
     return mk_response(result)
 
@@ -233,7 +249,8 @@ def set_init_inventory(storage_id: int) -> Response:
     - Response: A JSON response indicating the success or failure of the operation.
       {'success': True} or {'success': False}
     """
-    result: DBResult = wz.db.get_storage_name(storage_id)
+    db: Database = get_db()
+    result: DBResult = db.get_storage_name(storage_id)
     assert result is not None
     storage_name: str = result[0][0]
 
@@ -249,7 +266,7 @@ def set_init_inventory(storage_id: int) -> Response:
                                                       storage_id=storage_id,
                                                       amount=amount)
                 try:
-                    wz.db.update_storage(sm, absolute=True)
+                    db.update_storage(sm, absolute=True)
                 except Exception as e:
                     print(e)
                     return jsonify({'success': False})
@@ -263,7 +280,7 @@ def set_init_inventory(storage_id: int) -> Response:
 @app.route("/api/invoice/list", methods=["GET"])
 @app.route("/api/invoice/list/<string:waiter>", methods=["GET"])
 def get_invoice_list(waiter: str | None = None) -> Response:
-    result: DBResult = wz.db.get_invoice_list(waiter=waiter)
+    result: DBResult = get_db().get_invoice_list(waiter=waiter)
     print(result)
     return mk_response(result)
 
@@ -362,7 +379,7 @@ def send_html_message(message_path: str, path: str | None = None) -> Response:
 
 @app.route("/api/recipe/list", methods=["GET"])
 def get_receipes() -> Response:
-    result: DBResult = wz.db.get_receipes()
+    result: DBResult = get_db().get_receipes()
     return mk_response(result)
 
 # --- End API Routes ---

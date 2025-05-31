@@ -24,6 +24,8 @@ PRINTERPROFILE: LiteralString = "TM-T88II"
 SPOOLDIR: Path = Path("./spool")
 PRINTTEMPLATESPATH: Path = Path("./print_templates/")
 
+db_connection: wz.Database  # Global for this module
+
 
 @dataclass(order=True)
 class PrintJob:
@@ -208,7 +210,8 @@ class PrintService:
             return parser.output
 
     def print_invoice(self, invoice_id: int, template_name: str, output: str = "escpos") -> None:
-        result: DBResult = wz.db.get_invoice_data(invoice_id)
+        global db_connection
+        result: DBResult = db_connection.get_invoice_data(invoice_id)
         if not result:
             raise LookupError
 
@@ -262,11 +265,12 @@ class PrintService:
 if __name__ == "__main__":
     config_loader = ConfigLoader()
     config: dict[str, Any] = config_loader.config
+    db_connection = wz.Database()
     try:
-        wz.db.connect_to_database(config["database"]["server"],
-                                  config["database"]["username"],
-                                  config["database"]["password"],
-                                  config["database"]["database"])
+        db_connection.connect_to_database(config["database"]["server"],
+                                          config["database"]["username"],
+                                          config["database"]["password"],
+                                          config["database"]["database"])
     except KeyError as e:
         logger.error(
             f"CRITICAL: Missing database configuration key: {e}. Check your config.toml. Exiting.")
@@ -280,4 +284,11 @@ if __name__ == "__main__":
     logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
     logger.info("Starting print service")
     print_service = PrintService()
-    print_service.listen_for_input()
+    try:
+        print_service.listen_for_input()
+    except KeyboardInterrupt:
+        logger.info("Print service shutting down...")
+    finally:
+        if db_connection:
+            db_connection.close()
+        logger.info("Print service stopped.")
