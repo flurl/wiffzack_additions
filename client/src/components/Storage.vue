@@ -247,14 +247,12 @@ const onInitClicked = () => {
                                 "",
                                 { ok: true, cancel: false },
                                 async () => {
-                                    alert("closing window");
-                                    window.close();
+                                    window.location.reload();
                                 },
                             );
                         },
                         async () => {
-                            alert("closing window");
-                            window.close();
+                            window.location.reload();
                         }
                     );
                 } else {
@@ -262,9 +260,8 @@ const onInitClicked = () => {
                         '',
                         { ok: true, cancel: false },
                         async () => {
-                            alert("closing window");
-                            window.close();
-                        }
+                            window.location.reload();
+                        },
                     );
                 }
 
@@ -311,6 +308,10 @@ const onOKClicked = () => {
         { body: body, rawHTML: true },
         { ok: true, cancel: true },
         async () => {
+            showModal(title,
+                "",
+                { ok: false, cancel: false },
+            )
             exit(await putIntoStorage());
         },
     );
@@ -329,14 +330,13 @@ const exit = (success) => {
     let body = "";
     let buttons = { ok: true, cancel: false };
     let cb = () => {
-        window.setTimeout(() => {
-            try {
-                //window.close();
-            } catch (e) {
-                alert("Close window now");
-                window.location.reload();
-            }
-        }, 3000);
+        try {
+            console.log("Closing window now");
+            window.close();
+        } catch (e) {
+            alert("Close window now");
+            window.location.reload();
+        }
     }
     showModal(title, body, buttons, cb);
 }
