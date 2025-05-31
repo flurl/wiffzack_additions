@@ -55,10 +55,12 @@ const {
     articles,
     articleGroups,
     destStorageArticles,
+    transferStorageArticles,
     activeArticleGroup,
     selectedArticles,
     getArticlesInDestinationStorage,
     getArticlesInSourceStorage,
+    getArticlesInTransferStorage,
     putIntoStorage,
     setInitInventory,
     emptyTransferStorage,
@@ -201,12 +203,71 @@ const onInitClicked = () => {
         "",
         { ok: true, cancel: true },
         async () => {
-            if (await setInitInventory()
-                && await emptyTransferStorage()) {
-                showModal(t('message.init_stock_success'),
-                    "",
-                    { ok: true, cancel: false },
-                );
+            showModal(t('message.init_stock'),
+                "",
+                { ok: false, cancel: false },
+            )
+            if (await setInitInventory()) {
+
+                // check if there are any articles in the transfer storage
+                await getArticlesInTransferStorage();
+                let articlesDetailHtml = "";
+                const articlesToDisplay = [];
+
+                // Ensure transferStorageArticles.value is an object and has keys
+                if (transferStorageArticles.value && Object.keys(transferStorageArticles.value).length > 0) {
+                    for (const articleId in transferStorageArticles.value) {
+                        const article = transferStorageArticles.value[articleId];
+                        // Only list articles with a positive amount
+                        if (article.amount > 0.001) { // Using a small epsilon for float comparison
+                            articlesToDisplay.push({
+                                // Using toFixed(2) for amount, similar to other UI parts
+                                amount: article.amount.toFixed(2),
+                                name: article.name
+                            });
+                        }
+                    }
+                }
+
+                // if there were any articles found in the transfer storage, 
+                // ask the user if they want to remove them
+                if (articlesToDisplay.length > 0) {
+                    // You'll want to add these i18n keys to your translation files
+                    articlesDetailHtml = "<br><br>" + t('message.articles_in_transfer_storage_list_header') + "<table>";
+                    articlesToDisplay.forEach(article => {
+                        articlesDetailHtml += `<tr><td style="padding-right: 5px;">${article.amount}</td><td style="padding-right: 5px;">x</td><td>${article.name}</td></tr>`;
+                    });
+                    articlesDetailHtml += "</table>";
+                    showModal(t('message.init_stock_success'),
+                        { body: t('message.transfer_storage_not_empty') + articlesDetailHtml, rawHTML: true },
+                        { ok: true, cancel: true },
+                        async () => {
+                            await emptyTransferStorage();
+                            showModal(t('message.transfer_storage_empty_success'),
+                                "",
+                                { ok: true, cancel: false },
+                                async () => {
+                                    alert("closing window");
+                                    window.close();
+                                },
+                            );
+                        },
+                        async () => {
+                            alert("closing window");
+                            window.close();
+                        }
+                    );
+                } else {
+                    showModal(t('message.init_stock_success'),
+                        '',
+                        { ok: true, cancel: false },
+                        async () => {
+                            alert("closing window");
+                            window.close();
+                        }
+                    );
+                }
+
             } else {
                 showModal(t('message.init_stock_error'),
                     error.value,

@@ -11,6 +11,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, transferSt
     const articles = ref({});
     const articleGroups = ref([]);
     const destStorageArticles = ref({});
+    const transferStorageArticles = ref({});
     const activeArticleGroup = ref(null);
     const selectedArticles = ref({});
     const loading = ref(false);
@@ -88,6 +89,27 @@ export function useStorageData(sourceStorageId, destinationStorageId, transferSt
             loading.value = false;
         }
     };
+
+    const getArticlesInTransferStorage = async () => {
+        loading.value = true;
+        error.value = null;
+
+        let url = "";
+        url = `${config.backendHost}/api/get_articles_in_storage/${transferStorage.value.id}`;
+
+        try {
+            const response = await axios.get(url);
+            transferStorageArticles.value = {};
+            response.data.data.forEach(art => {
+                transferStorageArticles.value[art[0]] = { id: art[0], name: art[1], amount: art[2] };
+            });
+        } catch (err) {
+            error.value = err;
+        } finally {
+            loading.value = false;
+        }
+    };
+
 
     const putIntoStorage = async () => {
         loading.value = true;
@@ -201,11 +223,13 @@ export function useStorageData(sourceStorageId, destinationStorageId, transferSt
         articles,
         articleGroups,
         destStorageArticles,
+        transferStorageArticles,
         activeArticleGroup,
         selectedArticles,
         // getArticleGroups,
         getArticlesInDestinationStorage,
         getArticlesInSourceStorage,
+        getArticlesInTransferStorage,
         putIntoStorage,
         setInitInventory,
         emptyTransferStorage,
