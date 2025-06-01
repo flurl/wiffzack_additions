@@ -243,23 +243,47 @@ class PrintService:
 
         save_dir: Path = SPOOLDIR / invoice_data[0].waiter
         save_dir.mkdir(parents=True, exist_ok=True)
-        # template: Path = Path()
-        with open(PRINTTEMPLATESPATH / f"{template_name}.html", "r") as f:
-            template: str = f.read()
-            if output == "escpos":
-                with open(save_dir / f"{template_name}_{invoice_id}", "wb") as f:
-                    invoice: bytes = self.parse_invoice(
-                        invoice_data, template, output=output)
-                    f.write(invoice)
-            elif output == "html":
-                invoice: bytes = self.parse_invoice(
-                    invoice_data, template, output=output)
-                # sys.stdout.write(invoice.decode('iso-8859-1'))
-                print(invoice.decode('iso-8859-1'))
-                sys.stdout.flush()
 
+        template_file_path: Path = PRINTTEMPLATESPATH / f"{template_name}.html"
+        try:
+            with open(template_file_path, "r") as template_f:
+                template_content: str = template_f.read()
+        except Exception as e:
+            logger.error(
+                f"Failed to read template file {template_file_path} for invoice {invoice_id}: {e}", exc_info=True)
+            raise  # Re-raise to be caught by print_worker and retried
+
+        output_file_path: Path | None = None
+        if output == "escpos":
+            output_file_path = save_dir / f"{template_name}_{invoice_id}"
+
+        try:
+            # First, try to parse the invoice and generate the content
+            # This way, if parse_invoice fails, we haven't opened the output file yet (for escpos)
+            invoice_bytes: bytes = self.parse_invoice(
+                invoice_data, template_content, output=output)
+
+            if output == "escpos":
+                if output_file_path:  # Should always be true here
+                    with open(output_file_path, "wb") as out_f:
+                        out_f.write(invoice_bytes)
+                    logger.debug(
+                        f"Successfully wrote escpos output to {output_file_path}")
+            elif output == "html":
+                print(invoice_bytes.decode('iso-8859-1'))
+                sys.stdout.flush()
             else:
                 raise ValueError(f"Unknown output type: {output}")
+        except Exception as e:
+            logger.error(
+                f"Exception in print_invoice for invoice_id {invoice_id} (output: {output}): {type(e).__name__}: {e}", exc_info=True)
+            if output == "escpos" and output_file_path and output_file_path.exists() and output_file_path.stat().st_size == 0:
+                logger.warning(
+                    f"Output file {output_file_path} for invoice {invoice_id} exists and is 0 bytes after error.")
+            elif output == "escpos" and output_file_path and not output_file_path.exists():
+                logger.info(
+                    f"Output file {output_file_path} for invoice {invoice_id} was not created (error likely occurred before file open).")
+            raise  # Re-raise to be caught by print_worker for retry logic
 
 
 if __name__ == "__main__":
