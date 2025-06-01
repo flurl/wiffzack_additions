@@ -1,7 +1,10 @@
+import logging
 from typing import Any, LiteralString, cast
 import pymssql
 
 from .types import Article, StorageModifier, DBResult
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -10,7 +13,7 @@ class Database:
         self.cursor: pymssql.Cursor | None = None
 
     def connect_to_database(self, server: str, username: str, password: str, database: str) -> None:
-        print(f"Connecting to database {database} on {server}")
+        logger.info(f"Connecting to database {database} on {server}")
         """Establishes a connection to the database."""
         self.connection = pymssql.connect(server=server, user=username,
                                           password=password, database=database, tds_version=r"7.0")
@@ -43,13 +46,13 @@ class Database:
             # Handles cases where statement has no resultset (e.g. INSERT, UPDATE)
             except pymssql.OperationalError:
                 return None
-            except Exception as e:
-                print(
-                    f"Error fetching results for query: {query} with params: {params}. Error: {e}")
+            except Exception:
+                logger.error(
+                    f"Error fetching results for query: {query} with params: {params}.", exc_info=True)
                 raise
-        except Exception as e:
-            print(
-                f"Error executing query: {query} with params: {params}. Error: {e}")
+        except Exception:
+            logger.error(
+                f"Error executing query: {query} with params: {params}.", exc_info=True)
             raise
 
     def commit(self) -> None:
@@ -109,16 +112,19 @@ class Database:
             if result is None or len(result) == 0:
                 raise LookupError(
                     f"No unit modifier found for storage article {storage_article_id}.")
-            unit_modifier: float = result[0][0]
-            print(f"{unit_modifier=}")
+            # Ensure it's a float for calculation
+            unit_modifier: float = float(result[0][0])
+            logger.debug(
+                f"Unit modifier for storage_article_id {storage_article_id}: {unit_modifier}")
 
             query: LiteralString = f"""exec lager_update_stand %s, %s, %s"""
             self.execute_query(
-                query,  (article.id, storage_id, amount*unit_modifier))
-        except Exception as e:
+                query,  (article.id, storage_id, amount * unit_modifier))
+        except Exception:  # Keep 'e' for the raise, but logger will capture details
             self.rollback()
-            print(e)
-            raise e
+            logger.error(
+                f"Error updating storage for article {article.id}, storage {storage_id}, amount {amount}.", exc_info=True)
+            raise
         self.commit()
 
     def add_article_to_storage(self, sm: StorageModifier, absolute: bool = False) -> None:
@@ -352,10 +358,11 @@ class Database:
             where 1=1
             {' and rechnung_kellnerKurzName = %s' if waiter is not None else ''}
             order by rechnung_dt_erstellung desc
-        """
-        print(query, waiter)
-        rows: DBResult = self.execute_query(
-            cast(LiteralString, query), (waiter,))
+        """  # type: ignore
+        params = (waiter,) if waiter is not None else ()
+        logger.debug(
+            f"Executing get_invoice_list query: {query.strip()} with params: {params}")
+        rows: DBResult = self.execute_query(cast(LiteralString, query), params)
         return rows
 
     def get_receipes(self) -> DBResult:

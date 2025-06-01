@@ -21,6 +21,10 @@ from lib.config import ConfigLoader
 config_loader = ConfigLoader()
 config: dict[str, Any] = config_loader.config
 
+# Ensure the log directory exists before configuring logging
+# This path should match the directory used in logging.conf for fileHandler
+log_dir = Path("logs")
+log_dir.mkdir(parents=True, exist_ok=True)
 logger: logging.Logger = logging.getLogger(__name__)
 
 print_service_process: subprocess.Popen[bytes]
@@ -179,8 +183,9 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
                                                       storage_id=from_storage_id,
                                                       amount=article["amount"])
                 db.withdraw_article_from_storage(sm, absolute=absolute)
-        except Exception as e:
-            print(repr(e))
+        except Exception:
+            logger.error(
+                f"Error withdrawing article from storage {from_storage_id}", exc_info=True)
             return jsonify({'success': False})
 
     if to_storage_id is not None:
@@ -191,8 +196,9 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
                                                       storage_id=to_storage_id,
                                                       amount=article["amount"])
                 db.add_article_to_storage(sm, absolute=absolute)
-        except Exception as e:
-            print(e)
+        except Exception:
+            logger.error(
+                f"Error adding article to storage {to_storage_id}", exc_info=True)
             return jsonify({'success': False})
 
     return jsonify({'success': True})
@@ -267,11 +273,13 @@ def set_init_inventory(storage_id: int) -> Response:
                                                       amount=amount)
                 try:
                     db.update_storage(sm, absolute=True)
-                except Exception as e:
-                    print(e)
+                except Exception:
+                    logger.error(
+                        f"Error setting initial inventory for article ID {id} in storage {storage_id} from file {filename}", exc_info=True)
                     return jsonify({'success': False})
-    except FileNotFoundError as e:
-        print(e)
+    except FileNotFoundError:
+        logger.error(
+            f"Initial inventory file not found: {filename}", exc_info=True)
         return jsonify({'success': False})
 
     return jsonify({'success': True})
@@ -281,7 +289,6 @@ def set_init_inventory(storage_id: int) -> Response:
 @app.route("/api/invoice/list/<string:waiter>", methods=["GET"])
 def get_invoice_list(waiter: str | None = None) -> Response:
     result: DBResult = get_db().get_invoice_list(waiter=waiter)
-    print(result)
     return mk_response(result)
 
 
