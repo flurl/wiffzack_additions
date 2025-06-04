@@ -149,7 +149,11 @@ const modalConf = ref({
     },
     title: "",
     show: false,
-    callback: null
+    OKCallback: null,
+    cancelCallback: null,
+    body: "",
+    rawHTML: false,
+    type: "info",
 });
 /**
  * Displays a modal dialog with the given title, body, and buttons.
@@ -160,7 +164,7 @@ const modalConf = ref({
  * @param {function} OKCallback - The callback function to execute when the OK button is clicked.
  * @param {function} cancelCallback - The callback function to execute when the Cancel button is clicked.
  */
-const showModal = (title, body, buttons, OKCallback, cancelCallback) => {
+const showModal = (title, body, buttons, OKCallback, cancelCallback, type = "info") => {
     modalConf.value.title = title;
 
     // when rawHTML is set, the modal's body will not be cleaned
@@ -192,6 +196,8 @@ const showModal = (title, body, buttons, OKCallback, cancelCallback) => {
             }
         }
     }
+
+    modalConf.value.type = type;
 
     modalConf.value.show = true;
 }
@@ -249,11 +255,14 @@ const onInitClicked = () => {
                                 async () => {
                                     window.location.reload();
                                 },
+                                null,
+                                'success'
                             );
                         },
                         async () => {
                             window.location.reload();
-                        }
+                        },
+                        'question'
                     );
                 } else {
                     showModal(t('message.init_stock_success'),
@@ -262,6 +271,8 @@ const onInitClicked = () => {
                         async () => {
                             window.location.reload();
                         },
+                        null,
+                        'success'
                     );
                 }
 
@@ -269,10 +280,12 @@ const onInitClicked = () => {
                 showModal(t('message.init_stock_error'),
                     error.value,
                     { ok: true, cancel: false },
+                    null, null, 'error'
                 );
             };
         },
-    );
+        null,
+        'question');
 }
 
 
@@ -314,6 +327,8 @@ const onOKClicked = () => {
             )
             exit(await putIntoStorage());
         },
+        null,
+        'question'
     );
 }
 
@@ -338,14 +353,14 @@ const exit = (success) => {
             window.location.reload();
         }
     }
-    showModal(title, body, buttons, cb);
+    showModal(title, body, buttons, cb, null, success ? 'success' : 'error');
 }
 
 </script>
 
 <template>
     <div class="wrapper">
-        <ModalDialog :title="modalConf.title" :show="modalConf.show" :buttons="modalConf.buttons"
+        <ModalDialog :title="modalConf.title" :show="modalConf.show" :buttons="modalConf.buttons" :type="modalConf.type"
             @ok="modalConf.OKCallback" @cancel="modalConf.cancelCallback">
             <p v-if="modalConf.rawHTML === false">{{ modalConf.body }}</p>
             <span v-else v-html="modalConf.body"></span>
