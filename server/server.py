@@ -5,10 +5,8 @@ import logging
 from pathlib import Path
 import subprocess
 import sys
-import time
-from typing import Any, Iterable, LiteralString, NoReturn
+from typing import Any, Iterable, LiteralString
 import csv
-import threading
 
 from flask import Flask, jsonify, make_response, render_template, request, send_from_directory, g
 from flask_cors import CORS
@@ -26,8 +24,6 @@ config: dict[str, Any] = config_loader.config
 log_dir = Path("logs")
 log_dir.mkdir(parents=True, exist_ok=True)
 logger: logging.Logger = logging.getLogger(__name__)
-
-print_service_process: subprocess.Popen[bytes]
 
 # --- Static File Configuration ---
 # Calculate the path to the 'dist' directory relative to this script (server.py)
@@ -308,38 +304,76 @@ def print_invoice(invoice_id: int) -> Response:
     - Response: A JSON response indicating the success or failure of the operation.
       {'success': True} or {'success': False}
     """
-    global print_service_process
-    logger.info(f"Printing invoice with ID {invoice_id}")
+    logger.info(
+        f"Attempting to print invoice {invoice_id} by spawning a new print_service process.")
     try:
-        assert print_service_process.stdin is not None
-        print_service_process.stdin.write(
-            f"{invoice_id}:invoice:escpos\n".encode())
-        print_service_process.stdin.flush()
+        command: list[str] = [sys.executable, "print_service.py"]
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            text=True  # For string input to stdin
+        )
+
+        print_data: str = f"{invoice_id}:invoice:escpos\n"
+
+        if process.stdin:
+            process.stdin.write(print_data)
+            process.stdin.flush()
+            process.stdin.close()  # Signal EOF to print_service.py
+        else:
+            logger.error(
+                f"Failed to get stdin for print_service process for invoice {invoice_id}.")
+            return jsonify({'success': False, 'message': 'Failed to open stdin for print service'})
+
+        logger.info(
+            f"Print job for invoice {invoice_id} dispatched to a new print_service process.")
+        return jsonify({'success': True, 'message': 'Print job dispatched.'})
+
+    except FileNotFoundError:
+        logger.error(
+            f"print_service.py not found. Cannot print invoice {invoice_id}.", exc_info=True)
+        return jsonify({'success': False, 'message': 'Print service executable not found.'})
     except Exception as e:
-        logger.error(f"Failed to send print job to print service: {e}")
-        return jsonify({'success': False})
-    return jsonify({'success': True})
+        logger.error(
+            f"Failed to start print service for invoice {invoice_id}: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': f'Failed to start print service: {str(e)}'})
 
 
 @app.route("/api/invoice/html/<int:invoice_id>", methods=["GET"])
 def get_invoice_html(invoice_id: int) -> Response:
-    global print_service_process
+    logger.info(f"Fetching HTML for invoice {invoice_id} via new process")
     try:
-        assert print_service_process.stdin is not None and print_service_process.stdout is not None
-        print_service_process.stdin.write(
-            f"{invoice_id}:invoice:html\n".encode())
-        print_service_process.stdin.flush()
-        #  read from print_service_process.stdout until </html> is detected.
-        # Then return the processes output as flask response
-        output: bytes = b""
-        while True:
-            line: bytes = print_service_process.stdout.readline()
-            if not line:
-                break
-            output += line
-            if b"</html>" in line.lower():
-                break
-        return mk_response(output.decode('iso-8859-1'))
+        command: list[str] = [sys.executable, "print_service.py"]
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,  # Capture stderr for debugging
+            text=True,  # For string I/O
+            encoding='iso-8859-1'  # Match print_service.py's output encoding
+        )
+
+        print_data: str = f"{invoice_id}:invoice:html\n"
+        stdout_data: str
+        stderr_data: str
+        stdout_data, stderr_data = process.communicate(
+            input=print_data, timeout=30)
+
+        if process.returncode != 0:
+            logger.error(
+                f"Print service (HTML) for invoice {invoice_id} exited with code {process.returncode}. Stderr: {stderr_data}")
+            return jsonify({'success': False, 'message': f'Print service error: {stderr_data}'})
+
+        if not stdout_data:
+            logger.error(
+                f"Print service (HTML) for invoice {invoice_id} produced no output. Stderr: {stderr_data}")
+            return jsonify({'success': False, 'message': 'Print service produced no output'})
+
+        return mk_response(stdout_data.strip())
+    except subprocess.TimeoutExpired:
+        logger.error(
+            f"Print service (HTML) for invoice {invoice_id} timed out.")
+        return jsonify({'success': False, 'message': 'Print service timed out'})
     except Exception as e:
         logger.error(f"Failed to get html representation of invoice: {e}")
         return jsonify({'success': False})
@@ -426,35 +460,6 @@ def serve_vue_app(path: str) -> Response:
 # --- End Catch-all Route ---
 
 
-def monitor_print_service(process: subprocess.Popen[bytes]) -> NoReturn:
-    """
-    Monitors the print service process and restarts it if it exits.
-
-    This function continuously monitors the print service process. If the process
-    exits, it logs an error and attempts to restart the process.
-
-    Args:
-        process (subprocess.Popen): The print service process to monitor.
-    """
-    logger.info("Monitoring print service")
-    while True:
-        return_code: int | None = process.poll()
-        if return_code is not None:
-            logger.error(
-                f"Print service exited with return code: {return_code}")
-            logger.info("Restarting print service...")
-            process = start_print_service()
-        time.sleep(1)
-
-
-def start_print_service() -> subprocess.Popen[bytes]:
-    global print_service_process
-    logger.info("Starting print service")
-    print_service_process = subprocess.Popen(
-        [sys.executable, "print_service.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
-    return print_service_process
-
-
 def wants_json_response() -> bool:
     return request.accept_mimetypes['application/json'] >= \
         request.accept_mimetypes['text/html']
@@ -482,11 +487,6 @@ if __name__ == '__main__':
     logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
     logger.info("Starting server")
     logger.info(f"Serving static files from: {STATIC_FOLDER}")
-    print_service_process = start_print_service()
-    monitor_thread = threading.Thread(
-        target=monitor_print_service, args=(print_service_process,), daemon=True)
-    monitor_thread.start()
-    import threading
 
     # Use host/port from config if available, otherwise default
     server_host: str = config.get("server", {}).get("host", "0.0.0.0")
