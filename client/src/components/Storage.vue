@@ -156,63 +156,92 @@ const modalConf = ref({
     type: "info",
 });
 /**
- * Displays a modal dialog with the given title, body, and buttons.
+ * Displays a modal dialog with the given configuration.
  *
- * @param {string} title - The title of the modal.
- * @param {string|object} body - The body content of the modal. Can be a string or an object with 'body' and 'rawHTML' properties.
- * @param {object} buttons - An object specifying which buttons to show (e.g., { ok: true, cancel: true }).
- * @param {function} OKCallback - The callback function to execute when the OK button is clicked.
- * @param {function} cancelCallback - The callback function to execute when the Cancel button is clicked.
+ * @param {object} [config={}] - The configuration object for the modal.
+ * @param {string} [config.title=""] - The title of the modal.
+ * @param {string|object} [config.body=""] - The body content. Can be a string for plain text,
+ *                                       or an object { body: string, rawHTML: boolean } for HTML content.
+ * @param {object} [config.buttons={ok: true, cancel: true}] - Specifies which buttons to show.
+ * @param {boolean} [config.buttons.ok=true] - Show OK button.
+ * @param {boolean} [config.buttons.cancel=true] - Show Cancel button.
+ * @param {function} [config.OKCallback=null] - Callback for the OK button.
+ * @param {function} [config.cancelCallback=null] - Callback for the Cancel button.
+ * @param {string} [config.type="info"] - The type of the modal (e.g., 'info', 'success', 'error', 'question').
  */
-const showModal = (title, body, buttons, OKCallback, cancelCallback, type = "info") => {
-    modalConf.value.title = title;
+const showModal = (config = {}) => {
+    // Default values
+    const defaults = {
+        title: "",
+        body: "", // string or { body: string, rawHTML: boolean }
+        buttons: { ok: true, cancel: true },
+        OKCallback: null,
+        cancelCallback: null,
+        type: "info",
+    };
+
+    // Merge provided config with defaults
+    const mergedConfig = {
+        ...defaults,
+        ...config,
+        buttons: { // Ensure 'buttons' is always an object with 'ok' and 'cancel'
+            ...defaults.buttons,
+            ...(config.buttons || {}),
+        },
+    };
+
+    modalConf.value.title = mergedConfig.title;
 
     // when rawHTML is set, the modal's body will not be cleaned
-    if (typeof body === 'string') {
-        modalConf.value.body = body;
+    if (typeof mergedConfig.body === 'string') {
+        modalConf.value.body = mergedConfig.body;
         modalConf.value.rawHTML = false;
-    } else if (typeof body === 'object' && body.hasOwnProperty('body') && body.hasOwnProperty('rawHTML')) {
-        modalConf.value.body = body.body;
-        modalConf.value.rawHTML = body.rawHTML;
+    } else if (typeof mergedConfig.body === 'object' && mergedConfig.body !== null && 'body' in mergedConfig.body && 'rawHTML' in mergedConfig.body) {
+        modalConf.value.body = mergedConfig.body.body;
+        modalConf.value.rawHTML = mergedConfig.body.rawHTML;
     } else {
-        modalConf.value.body = '';
+        modalConf.value.body = ""; // Default to empty string if body is not string or expected object
+        modalConf.value.rawHTML = false;
     }
 
-    modalConf.value.buttons = buttons;
-    if (buttons.ok) {
+    modalConf.value.buttons = mergedConfig.buttons;
+    if (mergedConfig.buttons.ok) {
         modalConf.value.OKCallback = () => {
             modalConf.value.show = false;
-            if (OKCallback !== undefined) {
-                OKCallback();
+            if (mergedConfig.OKCallback) {
+                mergedConfig.OKCallback();
             }
-        }
+        };
+    } else {
+        modalConf.value.OKCallback = null;
     }
 
-    if (buttons.cancel) {
+    if (mergedConfig.buttons.cancel) {
         modalConf.value.cancelCallback = () => {
             modalConf.value.show = false;
-            if (cancelCallback !== undefined) {
-                cancelCallback();
+            if (mergedConfig.cancelCallback) {
+                mergedConfig.cancelCallback();
             }
-        }
+        };
+    } else {
+        modalConf.value.cancelCallback = null;
     }
 
-    modalConf.value.type = type;
-
+    modalConf.value.type = mergedConfig.type;
     modalConf.value.show = true;
 }
 
 
 // sets the initial inventory for the current source storage
 const onInitClicked = () => {
-    showModal(t('message.init_stock'),
-        "",
-        { ok: true, cancel: true },
-        async () => {
-            showModal(t('message.init_stock'),
-                "",
-                { ok: false, cancel: false },
-            )
+    showModal({
+        title: t('message.init_stock'),
+        type: 'question',
+        OKCallback: async () => {
+            showModal({
+                title: t('message.init_stock'),
+                buttons: { ok: false, cancel: false }
+            });
             if (await setInitInventory()) {
 
                 // check if there are any articles in the transfer storage
@@ -244,48 +273,46 @@ const onInitClicked = () => {
                         articlesDetailHtml += `<tr><td style="padding-right: 5px;">${article.amount}</td><td style="padding-right: 5px;">x</td><td>${article.name}</td></tr>`;
                     });
                     articlesDetailHtml += "</table>";
-                    showModal(t('message.init_stock_success'),
-                        { body: t('message.transfer_storage_not_empty') + articlesDetailHtml, rawHTML: true },
-                        { ok: true, cancel: true },
-                        async () => {
+                    showModal({
+                        title: t('message.init_stock_success'),
+                        body: { body: t('message.transfer_storage_not_empty') + articlesDetailHtml, rawHTML: true },
+                        type: 'question',
+                        OKCallback: async () => {
                             await emptyTransferStorage();
-                            showModal(t('message.transfer_storage_empty_success'),
-                                "",
-                                { ok: true, cancel: false },
-                                async () => {
+                            showModal({
+                                title: t('message.transfer_storage_empty_success'),
+                                buttons: { ok: true, cancel: false },
+                                type: 'success',
+                                OKCallback: async () => {
                                     window.location.reload();
-                                },
-                                null,
-                                'success'
-                            );
+                                }
+                            });
                         },
-                        async () => {
+                        cancelCallback: async () => {
                             window.location.reload();
-                        },
-                        'question'
-                    );
+                        }
+                    });
                 } else {
-                    showModal(t('message.init_stock_success'),
-                        '',
-                        { ok: true, cancel: false },
-                        async () => {
+                    showModal({
+                        title: t('message.init_stock_success'),
+                        buttons: { ok: true, cancel: false },
+                        type: 'success',
+                        OKCallback: async () => {
                             window.location.reload();
-                        },
-                        null,
-                        'success'
-                    );
+                        }
+                    });
                 }
 
             } else {
-                showModal(t('message.init_stock_error'),
-                    error.value,
-                    { ok: true, cancel: false },
-                    null, null, 'error'
-                );
+                showModal({
+                    title: t('message.init_stock_error'),
+                    body: error.value,
+                    buttons: { ok: true, cancel: false },
+                    type: 'error'
+                });
             };
-        },
-        null,
-        'question');
+        }
+    });
 }
 
 
@@ -317,19 +344,18 @@ const onOKClicked = () => {
     }
     body += "</table>";
 
-    showModal(title,
-        { body: body, rawHTML: true },
-        { ok: true, cancel: true },
-        async () => {
-            showModal(title,
-                "",
-                { ok: false, cancel: false },
-            )
+    showModal({
+        title: title,
+        body: { body: body, rawHTML: true },
+        type: 'question',
+        OKCallback: async () => {
+            showModal({
+                title: title,
+                buttons: { ok: false, cancel: false }
+            });
             exit(await putIntoStorage());
-        },
-        null,
-        'question'
-    );
+        }
+    });
 }
 
 
@@ -353,7 +379,13 @@ const exit = (success) => {
             window.location.reload();
         }
     }
-    showModal(title, body, buttons, cb, null, success ? 'success' : 'error');
+    showModal({
+        title: title,
+        body: body,
+        buttons: buttons,
+        OKCallback: cb,
+        type: success ? 'success' : 'error'
+    });
 }
 
 </script>
