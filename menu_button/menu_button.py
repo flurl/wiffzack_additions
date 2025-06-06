@@ -5,9 +5,10 @@ import tomllib
 import os
 from typing import LiteralString, Any
 from pathlib import Path
+import urllib.request
 
 from tkinter import (
-    Tk, Frame, Menubutton, Menu
+    Tk, Frame, Menubutton, Menu, messagebox
 )
 
 
@@ -51,7 +52,8 @@ FRONTEND_URLS: dict[str, str] = {
     "wardrobe_sales": "/data_table/wardrobe_sales",
     "messages": "/message/list",
     "invoices_dlg": "/invoices?terminal={client}",
-    "receipes": "/data_table/recipe/list"
+    "receipes": "/data_table/recipe/list",
+    "request_restart": "/api/restart"
 }
 
 CLIENT_NAME: LiteralString = config['client']['name']
@@ -112,6 +114,13 @@ class MenuButton(object):
         self.menu.add_cascade(label='System', menu=systemMenu,
                               underline=0, font=("Helvetica", 18, "bold"))
 
+        if config["client"]["debug"]:
+            debugMenu: Menu = Menu(self.menu)
+            debugMenu.add_command(label="Restart server process", underline=0,
+                                  command=self.request_server_process_restart, font=("Helvetica", 18, "bold"))
+            self.menu.add_cascade(label='Debug', menu=debugMenu,
+                                  underline=0, font=("Helvetica", 18, "bold"))
+
         # Assign the Menu object to the Menubutton using the menu option
         self.menuBtn['menu'] = self.menu
         self.menuBtn.pack(side="left")
@@ -166,6 +175,29 @@ class MenuButton(object):
 
     def reboot(self) -> None:
         os.system("shutdown -r")
+
+    def request_server_process_restart(self) -> None:
+        answer: bool = messagebox.askyesno(  # type: ignore
+            title="Restart server process", message="Do you really want to restart the server process?")
+        if answer:
+            url: str = f"http://{WEB_SERVER}{FRONTEND_URLS['request_restart']}"
+            try:
+                # allow newly opened window to become the top window
+                if os.name == 'nt':
+                    root.wm_attributes("-topmost", 0)
+                with urllib.request.urlopen(url) as response:
+                    if response.status == 200:
+                        messagebox.showinfo(  # type: ignore
+                            "Server Neustart", "Neustart-Anfrage an den Server gesendet.")
+                    else:
+                        messagebox.showerror(  # type: ignore
+                            "Server Neustart", f"Fehler beim Senden der Neustart-Anfrage: {response.status}")
+            except Exception as e:
+                messagebox.showerror(  # type: ignore
+                    "Server Neustart", f"Fehler bei der Verbindung zum Server: {e}")
+            finally:  # enable always on top again
+                if os.name == 'nt':
+                    root.wm_attributes("-topmost", 1)
 
     def dummyCmd(self) -> None:
         pass

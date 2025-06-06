@@ -423,6 +423,26 @@ def get_receipes() -> Response:
     result: DBResult = get_db().get_receipes()
     return mk_response(result)
 
+
+@app.route("/api/restart", methods=["GET"])
+def restart_server() -> Response:
+    """
+    Signals the server to restart by creating a flag file.
+    An external watchdog process is expected to monitor this file
+    and perform the actual server restart.
+    """
+    try:
+        flag_file_path_str: str = "./.restart"
+
+        flag_file = Path(flag_file_path_str)
+        flag_file.touch()  # Create the file or update its timestamp if it exists
+        logger.info(f"Restart requested. Flag file created at: {flag_file}")
+        return jsonify({'success': True, 'message': 'Server restart signaled.'})
+    except Exception as e:
+        logger.error(f"Error creating restart flag file: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': f'Error creating restart flag: {str(e)}'})
+
+
 # --- End API Routes ---
 
 # --- Catch-all route for Vue App ---

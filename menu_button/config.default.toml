@@ -2,3 +2,4 @@
 name = "CLIENTNAME"
 web_server = "localhost:5000"
 browser_cmd = "chromium --kiosk  --noerrdialogs --disable-infobars --enable-features=OverlayScrollbar"
+debug = false
