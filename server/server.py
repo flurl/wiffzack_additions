@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 import sys
 from typing import Any, Iterable, LiteralString
+import urllib.request
+import urllib.error
 import csv
 
 from flask import Flask, jsonify, make_response, render_template, request, send_from_directory, g
@@ -442,6 +444,52 @@ def restart_server() -> Response:
         logger.error(f"Error creating restart flag file: {e}", exc_info=True)
         return jsonify({'success': False, 'message': f'Error creating restart flag: {str(e)}'})
 
+
+@app.route("/api/alarm/trigger/<string:location>", methods=["GET"])
+def trigger_alarm(location: str) -> Response:
+    """
+    Triggers an external alarm by making a GET request to a predefined URL.
+
+    Parameters:
+    - location (str): The location identifier to be included in the alarm URL.
+
+    Returns:
+    - Response: A JSON response indicating the success or failure of the alarm trigger.
+    """
+    try:
+        alarm_url_template: str | None = config.get("alarm", {}).get("url")
+        if not alarm_url_template:
+            logger.error(
+                "Alarm trigger requested, but 'alarm.url' is not configured in server settings.")
+            return jsonify({'success': False, 'message': 'Alarm URL not configured on server.'})
+        alarm_url: str = alarm_url_template.format(location=location)
+    # Handles if .format(location=location) fails due to unexpected template
+    except KeyError as e:
+        logger.error(
+            f"Alarm URL template in config is invalid or missing 'location' placeholder: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Invalid alarm URL template in server configuration.'})
+
+    logger.info(
+        f"Attempting to trigger alarm for location '{location}' at URL: {alarm_url}")
+
+    try:
+        with urllib.request.urlopen(alarm_url, timeout=10) as response:
+            if response.status == 200:
+                logger.info(
+                    f"Alarm successfully triggered for location '{location}'. Response: {response.read().decode('utf-8')}")
+                return jsonify({'success': True, 'message': f'Alarm triggered successfully for {location}.'})
+            else:
+                logger.error(
+                    f"Failed to trigger alarm for location '{location}'. Status: {response.status}, Response: {response.read().decode('utf-8')}")
+                return jsonify({'success': False, 'message': f'Alarm server returned status {response.status}.'})
+    except urllib.error.URLError as e:
+        logger.error(
+            f"Error triggering alarm for location '{location}' at {alarm_url}: {e.reason}", exc_info=True)
+        return jsonify({'success': False, 'message': f'Failed to connect to alarm server: {e.reason}'})
+    except Exception as e:
+        logger.error(
+            f"An unexpected error occurred while triggering alarm for '{location}': {e}", exc_info=True)
+        return jsonify({'success': False, 'message': f'An unexpected error occurred: {str(e)}'})
 
 # --- End API Routes ---
 

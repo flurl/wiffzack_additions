@@ -53,7 +53,8 @@ FRONTEND_URLS: dict[str, str] = {
     "messages": "/message/list",
     "invoices_dlg": "/invoices?terminal={client}",
     "receipes": "/data_table/recipe/list",
-    "request_restart": "/api/restart"
+    "request_restart": "/api/restart",
+    "alarm": "/alarm?terminal={client}"
 }
 
 CLIENT_NAME: LiteralString = config['client']['name']
@@ -114,10 +115,18 @@ class MenuButton(object):
         self.menu.add_cascade(label='System', menu=systemMenu,
                               underline=0, font=("Helvetica", 18, "bold"))
 
+        alarmMenu: Menu = Menu(self.menu)
+        alarmMenu.add_command(label='Alarm', underline=0,
+                              command=self.open_alarm_dlg, font=("Helvetica", 18, "bold"))
+        self.menu.add_separator()
+        self.menu.add_cascade(label='Alarm', menu=alarmMenu,
+                              underline=0, font=("Helvetica", 18, "bold"))
+
         if config["client"]["debug"]:
             debugMenu: Menu = Menu(self.menu)
             debugMenu.add_command(label="Restart server process", underline=0,
                                   command=self.request_server_process_restart, font=("Helvetica", 18, "bold"))
+            self.menu.add_separator()
             self.menu.add_cascade(label='Debug', menu=debugMenu,
                                   underline=0, font=("Helvetica", 18, "bold"))
 
@@ -175,6 +184,10 @@ class MenuButton(object):
 
     def reboot(self) -> None:
         os.system("shutdown -r")
+
+    def open_alarm_dlg(self) -> None:
+        self.open_browser(
+            f"http://{WEB_SERVER}{FRONTEND_URLS['alarm'].format(client=CLIENT_NAME)}")
 
     def request_server_process_restart(self) -> None:
         answer: bool = messagebox.askyesno(  # type: ignore

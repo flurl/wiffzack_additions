@@ -35,7 +35,13 @@ const i18n = createI18n({
         quit: "Quit",
         invoices: "Invoices",
         show_all_invoices: "Show all invoices",
-        print: "Print"
+        print: "Print",
+        alarm: "Alarm",
+        trigger_alarm: "Trigger alarm",
+        trigger_alarm_success: "Alarm triggered",
+        alarm_url_construction_error: "Alarm trigger URL could not be constructed. Configuration or Terminal ID missing.",
+        sending_alarm_signal: "Sending alarm signal...",
+        terminal_id_not_found_error: "Terminal ID not found in URL. Cannot trigger alarm."
       }
     },
     de: {
@@ -61,7 +67,13 @@ const i18n = createI18n({
         quit: "Beenden",
         invoices: "Rechnungen",
         show_all_invoices: "Alle Rechnungen anzeigen",
-        print: "Drucken"
+        print: "Drucken",
+        alarm: "Alarm",
+        trigger_alarm: "Alarm auslösen",
+        trigger_alarm_success: "Alarm erfolgreich ausgelöst",
+        alarm_url_construction_error: "Alarm-URL konnte nicht erstellt werden. Konfiguration oder Terminal-ID fehlt.",
+        sending_alarm_signal: "Alarmsignal wird gesendet...",
+        terminal_id_not_found_error: "Terminal-ID nicht in URL gefunden. Alarm kann nicht ausgelöst werden."
       }
     }
   }
@@ -123,10 +135,3 @@ const init = async () => {
 };
 
 init();
-
-
-
-
-
-
-

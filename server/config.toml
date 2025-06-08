@@ -14,6 +14,9 @@ port = 5000
 debug = false
 init_stock_directory = "assets/init/"
 
+[alarm]
+url = "http://192.168.202.1/alarm_trigger.php?location={location}"
+
 
 [terminal_config]
 

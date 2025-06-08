@@ -5,6 +5,7 @@ import StorageSelection from '@/components/StorageSelection.vue'
 import MessageList from '../components/MessageList.vue'
 import MessageView from '../components/MessageView.vue'
 import InvoicePrintDialog from '../components/InvoicePrintDialog.vue'
+import AlarmDialog from '@/components/AlarmDialog.vue'
 
 const router = createRouter({
   // we need memory history mode to make window.close() work
@@ -47,6 +48,12 @@ const router = createRouter({
       path: '/invoices',
       name: 'invoices',
       component: InvoicePrintDialog,
+      props: false,
+    },
+    {
+      path: '/alarm',
+      name: 'alarm',
+      component: AlarmDialog,
       props: false,
     },
   ],
