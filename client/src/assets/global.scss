@@ -45,6 +45,51 @@ body {
   flex-direction: column;
 }
 
+input {
+  background-color: $light-background;
+  border: $light-border;
+  color: $light-text;
+  font-family: inherit;
+  font-size: 1.25rem;
+  padding: 20px 15px;
+  border-radius: 5px;
+  margin: 4px 2px;
+  box-sizing: border-box;
+  display: inline-block;
+  line-height: 1.2;
+  min-height: 48px;
+
+  // Transitions for smooth focus/hover effects
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+  // States
+  &:hover {
+    // Darken border on hover for feedback, using a similar scale as button hover if applicable
+    border-color: color.scale($light-border, $lightness: -20%);
+  }
+
+  &:focus,
+  &:focus-within {
+    // Use focus-within for cases where the input might be wrapped (e.g., in a label)
+    outline: none; // Remove default browser outline to use custom focus style
+    border-color: $light-button-background; // Use button background color for focus border for thematic consistency
+    box-shadow: 0 0 0 3px rgba(color.scale($light-button-background, $lightness: -10%), 0.4); // Subtle glow effect, similar to button interactions
+  }
+
+  &:disabled {
+    background-color: #ccc; // Match button's disabled background
+    color: #666; // Dim text color for disabled state
+    cursor: not-allowed; // Indicate non-interactive state
+    border-color: #bbb; // Slightly darker border for disabled state
+  }
+
+  // Placeholder styling
+  &::placeholder {
+    color: color.scale($light-text, $alpha: -50%); // Make placeholder text lighter and less prominent
+    opacity: 1; // Ensures consistent placeholder visibility (especially for Firefox)
+  }
+}
+
 /* Base styles for all buttons */
 .button,
 button {
