@@ -52,7 +52,7 @@ FRONTEND_URLS: dict[str, str] = {
     "wardrobe_sales": "/data_table/wardrobe_sales",
     "messages": "/message/list",
     "invoices_dlg": "/invoices?terminal={client}",
-    "receipes": "/data_table/recipe/list",
+    "receipes": "/data_table/recipe/list?groupByColumn=0",
     "request_restart": "/api/restart",
     "alarm": "/alarm?terminal={client}"
 }
