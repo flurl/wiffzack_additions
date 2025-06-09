@@ -7,6 +7,8 @@ import subprocess
 import sys
 from typing import Any, Iterable, LiteralString
 import urllib.request
+import json  # Add this import
+import random  # Add this import
 import urllib.error
 import csv
 
@@ -25,6 +27,8 @@ config: dict[str, Any] = config_loader.config
 # This path should match the directory used in logging.conf for fileHandler
 log_dir = Path("logs")
 log_dir.mkdir(parents=True, exist_ok=True)
+
+JOTD_FILE_PATH: Path = Path("./stupidstuff.json")
 logger: logging.Logger = logging.getLogger(__name__)
 
 # --- Static File Configuration ---
@@ -491,6 +495,48 @@ def trigger_alarm(location: str) -> Response:
             f"An unexpected error occurred while triggering alarm for '{location}': {e}", exc_info=True)
         return jsonify({'success': False, 'message': f'An unexpected error occurred: {str(e)}'})
 
+
+@app.route("/api/jotd", methods=["GET"])
+def get_jotd() -> Response:
+    """
+    Retrieves a random "Joke of the Day" from the stupidstuff.json file.
+
+    Returns:
+    - Response: A plaintext response containing the body of a randomly selected joke,
+                or an error message if the file cannot be processed.
+    """
+    try:
+        if not JOTD_FILE_PATH.is_file():
+            logger.error(f"JOTD file not found at {JOTD_FILE_PATH}")
+            return mk_response("Joke file not found.", heading="Error")
+
+        with open(JOTD_FILE_PATH, 'r', encoding='utf-8') as f:
+            jokes: list[dict[str, Any]] = json.load(f)
+
+        if not jokes:
+            logger.error(f"JOTD file {JOTD_FILE_PATH} is empty or not a list.")
+            return mk_response("No jokes available or file format error.", heading="Error")
+
+        body: str = ""
+        while body == "":
+            selected_joke: dict[str, Any] = random.choice(jokes)
+            try:
+                body = selected_joke["body"]
+                if body == "":
+                    logger.warning(
+                        f"Joke {selected_joke['id']} body is empty.")
+            except KeyError:
+                return mk_response("Joke body not found.")
+        return mk_response(body)
+
+    except json.JSONDecodeError:
+        logger.error(
+            f"Error decoding JSON from {JOTD_FILE_PATH}", exc_info=True)
+        return mk_response("Error reading joke file format.", heading="Error")
+    except Exception as e:
+        logger.error(
+            f"An unexpected error occurred in get_jotd: {e}", exc_info=True)
+        return mk_response(f"An unexpected error occurred: {str(e)}", heading="Error")
 # --- End API Routes ---
 
 # --- Catch-all route for Vue App ---

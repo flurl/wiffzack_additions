@@ -3,6 +3,7 @@
 import subprocess
 import tomllib
 import os
+import random
 from typing import LiteralString, Any
 from pathlib import Path
 import urllib.request
@@ -54,7 +55,8 @@ FRONTEND_URLS: dict[str, str] = {
     "invoices_dlg": "/invoices?terminal={client}",
     "receipes": "/data_table/recipe/list?groupByColumn=0",
     "request_restart": "/api/restart",
-    "alarm": "/alarm?terminal={client}"
+    "alarm": "/alarm?terminal={client}",
+    "jotd": "/jotd"
 }
 
 CLIENT_NAME: LiteralString = config['client']['name']
@@ -121,6 +123,13 @@ class MenuButton(object):
         self.menu.add_separator()
         self.menu.add_cascade(label='Alarm', menu=alarmMenu,
                               underline=0, font=("Helvetica", 18, "bold"))
+
+        self.easter_egg_menu: Menu = Menu(self.menu)
+        self.make_easter_egg_menu()
+        self.menu.add_cascade(
+            label='Admin only', menu=self.easter_egg_menu, font=("Helvetica", 18, "bold"))
+        self.easter_egg_menu.configure(
+            postcommand=lambda: self.make_easter_egg_menu())
 
         if config["client"]["debug"]:
             debugMenu: Menu = Menu(self.menu)
@@ -189,6 +198,10 @@ class MenuButton(object):
         self.open_browser(
             f"http://{WEB_SERVER}{FRONTEND_URLS['alarm'].format(client=CLIENT_NAME)}")
 
+    def show_jotd(self) -> None:
+        self.open_browser(
+            f"http://{WEB_SERVER}{FRONTEND_URLS['jotd']}")
+
     def request_server_process_restart(self) -> None:
         answer: bool = messagebox.askyesno(  # type: ignore
             title="Restart server process", message="Do you really want to restart the server process?")
@@ -214,6 +227,57 @@ class MenuButton(object):
 
     def dummyCmd(self) -> None:
         pass
+
+    def make_easter_egg_menu(self) -> None:
+        menu_labels: list[str] = [
+            "Achtung, Minenfeld!",
+            "Hier endet die Gemütlichkeit!",
+            "Weiterklicken auf eigene Gefahr!",
+            "Nicht öffnen – Monster drin!",
+            "Klick hier und du bist gefeuert!",
+            "Warnung: Langweilig!",
+            "Nur für Mutige – oder Dumme!",
+            "Hier wartet nur Enttäuschung!",
+            "Weiter geht’s in den Abgrund!",
+            "Nicht klicken – ernsthaft!",
+            "Klick hier und dein Computer explodiert!",
+            "Nur für Katzenliebhaber!",
+            "Weiterklicken = Kaffeefleck auf Touchscreen!",
+            "Hier beginnt die Langeweile!",
+            "Warnung: Enthält Mathematik!",
+            "Nicht öffnen – Pandorabüchse!",
+            "Klick hier und du verlierst das Spiel!",
+            "Weiterklicken führt zu Montagsgefühlen!",
+            "Achtung: Hier wartet ein Papiertiger!",
+            "Nicht klicken – außer du magst Fehler!",
+            "Letzte Warnung!",
+            "Nicht weiter!",
+            "Weitergehen bedeutet Gefahr fürs System!",
+            "Stop!!!",
+            "Wer weitermacht wird gemeldet!"
+        ]
+        self.easter_egg_menu.delete(0, 'end')
+
+        level1_menu: Menu = Menu(self.easter_egg_menu)
+        level2_menu: Menu = Menu(level1_menu)
+        level3_menu: Menu = Menu(level2_menu)
+        level4_menu: Menu = Menu(level3_menu)
+
+        self.easter_egg_menu.add_cascade(label=menu_labels.pop(
+            random.randint(0, len(menu_labels) - 1)), menu=level1_menu,
+            underline=0, font=("Helvetica", 18, "bold"))
+        level1_menu.add_cascade(label=menu_labels.pop(
+            random.randint(0, len(menu_labels) - 1)), menu=level2_menu,
+            underline=0, font=("Helvetica", 18, "bold"))
+        level2_menu.add_cascade(label=menu_labels.pop(
+            random.randint(0, len(menu_labels) - 1)), menu=level3_menu,
+            underline=0, font=("Helvetica", 18, "bold"))
+        level3_menu.add_cascade(label=menu_labels.pop(
+            random.randint(0, len(menu_labels) - 1)), menu=level4_menu,
+            underline=0, font=("Helvetica", 18, "bold"))
+        level4_menu.add_command(label=menu_labels.pop(
+            random.randint(0, len(menu_labels) - 1)), underline=0,
+            command=self.show_jotd, font=("Helvetica", 18, "bold"))
 
 
 if __name__ == '__main__':
