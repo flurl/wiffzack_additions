@@ -370,7 +370,8 @@ class Database:
             SELECT
                 art1.artikel_bezeichnung,
                 zutate_menge,
-                art2.artikel_bezeichnung
+                art2.artikel_bezeichnung,
+                lager_einheit_name
             FROM
                 artikel_basis AS art1
             INNER JOIN
