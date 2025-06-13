@@ -67,6 +67,17 @@ class Database:
     ** STORAGE
     ********************"""
 
+    def get_article(self, article_id: int | None = None) -> DBResult:
+        query: LiteralString = f"""
+            select artikel_id, artikel_bezeichnung
+            from artikel_basis
+            where 1=1
+            {' and artikel_id = %s' if article_id is not None else ''}
+        """
+        params: tuple[int, ...] = () if article_id is None else (article_id,)
+        rows: DBResult = self.execute_query(query, params)
+        return rows
+
     def update_storage(self, sm: StorageModifier, absolute: bool = False) -> None:
         storage_id: int = sm.storage_id
         amount: int = sm.amount

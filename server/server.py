@@ -30,6 +30,7 @@ log_dir.mkdir(parents=True, exist_ok=True)
 
 JOTD_FILE_PATH: Path = Path("./stupidstuff.json")
 logger: logging.Logger = logging.getLogger(__name__)
+storage_transfer_logger: logging.Logger = logging.getLogger("storage_transfer")
 
 # --- Static File Configuration ---
 # Calculate the path to the 'dist' directory relative to this script (server.py)
@@ -120,6 +121,16 @@ def get_articles() -> Response:
     return mk_response(rows)
 
 
+@app.route("/api/articles", methods=["GET"])
+@app.route("/api/articles/<int:article_id>", methods=["GET"])
+def get_article(article_id: int | None = None) -> Response:
+    result: DBResult = get_db().get_article(article_id)
+    return mk_response(result)
+
+
+# --- API Routes ---
+
+
 @app.route('/api/storage_article_groups', methods=['GET'])
 @app.route('/api/storage_article_groups/<int:storage_id>', methods=['GET'])
 def get_storage_article_groups(storage_id: int | None = None) -> Response:
@@ -179,12 +190,23 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
 
     if from_storage_id is not None:
         try:
+            result: DBResult = db.get_storage_name(from_storage_id)
+            assert result is not None
+            from_storage_name: str = result[0][0]
+        except AssertionError:
+            return jsonify({'success': False, 'message': f'Invalid from storage ID {from_storage_id}'})
+
+        try:
             for article in articles.values():
-                logger.debug("from", article)
+                logger.debug(
+                    f"Processing withdrawal for article: {article} from storage: {from_storage_id}")
                 sm: StorageModifier = StorageModifier(article=Article(article["id"], article["name"]),
                                                       storage_id=from_storage_id,
                                                       amount=article["amount"])
                 db.withdraw_article_from_storage(sm, absolute=absolute)
+                storage_transfer_logger.info(
+                    f"Withdrew|{sm.amount}|{sm.article.id}-{sm.article.name}|{from_storage_id}-{from_storage_name}"
+                )
         except Exception:
             logger.error(
                 f"Error withdrawing article from storage {from_storage_id}", exc_info=True)
@@ -192,12 +214,23 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
 
     if to_storage_id is not None:
         try:
+            result: DBResult = db.get_storage_name(to_storage_id)
+            assert result is not None
+            to_storage_name: str = result[0][0]
+        except AssertionError:
+            return jsonify({'success': False, 'message': f'Invalid to storage ID {to_storage_id}'})
+
+        try:
             for article in articles.values():
-                logger.debug("to", article)
+                logger.debug(
+                    f"Processing addition for article: {article} to storage: {to_storage_id}")
                 sm: StorageModifier = StorageModifier(article=Article(article["id"], article["name"]),
                                                       storage_id=to_storage_id,
                                                       amount=article["amount"])
                 db.add_article_to_storage(sm, absolute=absolute)
+                storage_transfer_logger.info(
+                    f"Added|{sm.amount}|{sm.article.id}-{sm.article.name}|{to_storage_id}-{to_storage_name}"
+                )
         except Exception:
             logger.error(
                 f"Error adding article to storage {to_storage_id}", exc_info=True)
@@ -270,11 +303,16 @@ def set_init_inventory(storage_id: int) -> Response:
             for line in csvFile:
                 id: int = int(line["article_id"])
                 amount: int = int(line["amount"])
-                sm: StorageModifier = StorageModifier(article=Article(id, ""),
+                result: DBResult = db.get_article(id)
+                assert result is not None
+                article_name: str = result[0][1]
+                sm: StorageModifier = StorageModifier(article=Article(id, article_name),
                                                       storage_id=storage_id,
                                                       amount=amount)
                 try:
                     db.update_storage(sm, absolute=True)
+                    storage_transfer_logger.info(
+                        f"Init|{sm.amount}|{sm.article.id}-{sm.article.name}|{storage_id}-{storage_name}")
                 except Exception:
                     logger.error(
                         f"Error setting initial inventory for article ID {id} in storage {storage_id} from file {filename}", exc_info=True)
