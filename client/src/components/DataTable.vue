@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUpdated, ref, nextTick, watch } from 'vue';
 import { useApiData } from '@/composables/useApiData'; // Adjust path if needed
+import OnScreenKeyboard from './OnScreenKeyboard.vue';
 import Header from './Header.vue';
 
 import dragscroll from 'dragscroll';
@@ -37,7 +38,6 @@ const {
 });
 
 const filterString = ref('');
-const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
 const searchMode = ref('startsWith'); // 'includes' or 'startsWith'
 
 const showFilterControls = ref(false);
@@ -46,19 +46,6 @@ const filterControlsHeight = ref(0);
 const tableScrollContainerRef = ref(null); // Add a ref for the scroll container
 const groupByColumnIndex = ref(null);
 
-const appendToFilter = (char) => {
-    filterString.value += char;
-};
-
-const resetFilter = () => {
-    filterString.value = '';
-};
-
-const backspaceFilter = () => {
-    if (filterString.value.length > 0) {
-        filterString.value = filterString.value.slice(0, -1);
-    }
-};
 
 const toggleSearchMode = () => {
     searchMode.value = searchMode.value === 'includes' ? 'startsWith' : 'includes';
@@ -138,7 +125,7 @@ watch(showFilterControls, async (isShown) => {
         }
     } else {
         // reset filter when the filter input is hidden
-        resetFilter();
+        filterString.value = ''; // Directly reset filterString
     }
     // When hidden, the padding will be set to 0 based on showFilterControls directly in the template
 });
@@ -207,17 +194,8 @@ onUpdated(() => {
         <div class="filter_input" v-if="showFilterControls" ref="filterControlsRef">
             <input type="text" placeholder="Filter..." v-model="filterString"
                 @input="filterString = $event.target.value.toUpperCase()">
-            <div class="alphabet-buttons">
-                <button v-for="char in alphabet" :key="char" @click="appendToFilter(char)">
-                    {{ char }}
-                </button>
-                <button @click="appendToFilter(' ')" class="space-button">Space</button>
-                <button @click="toggleSearchMode" class="search-mode-button">
-                    Mode: {{ searchMode === 'includes' ? 'Contains' : 'Starts With' }}
-                </button>
-                <button @click="backspaceFilter" class="backspace-button">⌫</button>
-                <button @click="resetFilter" class="reset-button">Reset</button>
-            </div>
+            <OnScreenKeyboard v-model="filterString" :search-mode="searchMode" @toggle-search-mode="toggleSearchMode"
+                @reset-filter="filterString = ''" />
         </div>
     </div>
 </template>
@@ -298,34 +276,5 @@ tr.row-bg-alt {
     flex-direction: column;
     gap: 5px;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); // Optional: add a subtle shadow to lift it visually
-}
-
-.alphabet-buttons button {
-    margin: 2px;
-    padding: 10px 10px;
-}
-
-.reset-button {
-    background-color: #f44336;
-    /* Example danger color */
-    color: white;
-}
-
-.search-mode-button {
-    background-color: #2196F3;
-    /* Example info color */
-    color: white;
-}
-
-.backspace-button {
-    background-color: #ff9800;
-    /* Example warning/orange color */
-    color: white;
-    font-weight: bold;
-}
-
-.space-button {
-    min-width: 80px; // Make the space button a bit wider
-    background-color: #607d8b; // Example neutral color (blue grey)
 }
 </style>
