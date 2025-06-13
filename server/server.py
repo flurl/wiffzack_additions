@@ -328,7 +328,9 @@ def set_init_inventory(storage_id: int) -> Response:
 @app.route("/api/invoice/list", methods=["GET"])
 @app.route("/api/invoice/list/<string:waiter>", methods=["GET"])
 def get_invoice_list(waiter: str | None = None) -> Response:
-    result: DBResult = get_db().get_invoice_list(waiter=waiter)
+    invoice_type: int | None = request.args.get("invoice_type", type=int)
+    result: DBResult = get_db().get_invoice_list(
+        waiter=waiter, invoice_type=invoice_type)
     return mk_response(result)
 
 
@@ -421,6 +423,13 @@ def get_invoice_html(invoice_id: int) -> Response:
     except Exception as e:
         logger.error(f"Failed to get html representation of invoice: {e}")
         return jsonify({'success': False})
+
+
+@app.route("/api/invoice_type", methods=["GET"])
+@app.route("/api/invoice_type/<int:invoice_type_id>", methods=["GET"])
+def get_invoice_type(invoice_type_id: int | None = None) -> Response:
+    result: DBResult = get_db().get_invoice_type(invoice_type_id)
+    return mk_response(result)
 
 
 @app.route("/api/message/list", methods=["GET"])

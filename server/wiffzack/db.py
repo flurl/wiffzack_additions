@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import logging
 from typing import Any, LiteralString, cast
 import pymssql
@@ -34,7 +35,7 @@ class Database:
             self.connection.close()
             self.connection = None
 
-    def execute_query(self, query: LiteralString, params: tuple[Any, ...] = ()) -> list[tuple[Any, ...]] | None:
+    def execute_query(self, query: LiteralString, params: Iterable[Any] = ()) -> list[tuple[Any, ...]] | None:
         """Executes a SQL query and returns the result."""
         if self.cursor is None:
             raise ConnectionError(
@@ -64,7 +65,7 @@ class Database:
         self.connection.rollback()
 
     """********************
-    ** STORAGE
+    ** ARTICLES
     ********************"""
 
     def get_article(self, article_id: int | None = None) -> DBResult:
@@ -77,6 +78,10 @@ class Database:
         params: tuple[int, ...] = () if article_id is None else (article_id,)
         rows: DBResult = self.execute_query(query, params)
         return rows
+
+    """********************
+    ** STORAGE
+    ********************"""
 
     def update_storage(self, sm: StorageModifier, absolute: bool = False) -> None:
         storage_id: int = sm.storage_id
@@ -362,19 +367,40 @@ class Database:
         rows: DBResult = self.execute_query(query, (invoice_id,))
         return rows
 
-    def get_invoice_list(self, waiter: str | None = None, limit: int = 10) -> DBResult:
+    def get_invoice_list(self, waiter: str | None = None, invoice_type: int | None = None, limit: int = 10) -> DBResult:
         query: str = f"""
             select top {limit} rechnung_id, rechnung_nr, rechnung_dt_erstellung, rechnung_tischCode, rechnung_kellnerKurzName
             from rechnungen_basis
             where 1=1
             {' and rechnung_kellnerKurzName = %s' if waiter is not None else ''}
+            {' and rechnung_typ = %s' if invoice_type is not None else ''}
             order by rechnung_dt_erstellung desc
         """  # type: ignore
-        params = (waiter,) if waiter is not None else ()
+        params: list[str | int] = []
+        if waiter is not None:
+            params.append(waiter)
+        if invoice_type is not None:
+            params.append(invoice_type)
         logger.debug(
             f"Executing get_invoice_list query: {query.strip()} with params: {params}")
         rows: DBResult = self.execute_query(cast(LiteralString, query), params)
         return rows
+
+    def get_invoice_type(self, id: int | None = None) -> DBResult:
+        query: LiteralString = f"""
+            SELECT rechnung_typ_id, rechnung_typ_kurz, rechnung_typ_bezeichnung,
+            rechnung_typ_maxNummer, rechnung_typ_istBarverkaufTyp, rechnung_typ_istAufwandTyp,
+            rechnung_typ_anzahl, rechnung_typ_istSofortRechnungstyp
+            FROM rechnungen_typen
+            {' WHERE rechnung_typ_id = %s' if id is not None else ''}
+        """
+        params: tuple[int] | tuple[()] = (id,) if id is not None else ()
+        rows: DBResult = self.execute_query(query, params)
+        return rows
+
+    """********************
+    ** RECIPES
+    ********************"""
 
     def get_receipes(self) -> DBResult:
         query: LiteralString = f"""

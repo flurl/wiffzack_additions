@@ -47,7 +47,7 @@ body {
 
 input {
   background-color: $light-background;
-  border: $light-border;
+  border: 2px solid $light-border;
   color: $light-text;
   font-family: inherit;
   font-size: 1.25rem;
@@ -90,11 +90,65 @@ input {
   }
 }
 
+select {
+  background-color: $light-background;
+  border: 2px solid $light-border;
+  color: $light-text;
+  font-family: inherit;
+  font-size: 1.25rem;
+  padding: 20px 15px;
+  border-radius: 5px;
+  margin: 4px 2px;
+  box-sizing: border-box;
+  display: inline-block;
+  line-height: 1.2;
+  min-height: 48px;
+  appearance: none; // Removes default system styling
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23333' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 16px 12px;
+  padding-right: 40px; // Make room for the arrow
+
+  // Transitions for smooth focus/hover effects
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+  // States
+  &:hover {
+    border-color: color.scale($light-border, $lightness: -20%);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $light-button-background;
+    box-shadow: 0 0 0 3px rgba(color.scale($light-button-background, $lightness: -10%), 0.4);
+  }
+
+  &:disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+    border-color: #bbb;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23666' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  }
+
+  // For multiple select
+  &[multiple] {
+    background-image: none;
+    padding: 15px;
+
+    option {
+      padding: 8px 12px;
+    }
+  }
+}
+
+
 /* Base styles for all buttons */
 .button,
 button {
   background-color: $light-button-background;
-  border: $light-border;
+  border: 2px solid $light-border;
   color: $light-button-text;
   padding: 15px 32px;
   text-align: center;
@@ -145,6 +199,16 @@ button {
     background-color: color.scale($light-button-background, $lightness: -30%);
   }
 
+}
+
+.slider.round {
+  border: 2px solid $light-border;
+}
+
+span.slider.round::before {
+  border: 2px solid $light-border;
+  bottom: 0;
+  left: 0;
 }
 
 .button-outline {
