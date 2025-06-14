@@ -1,81 +1,143 @@
-# Wiffzack Additions - Client Documentation
+# Wiffzack Client Documentation
 
-This document describes the structure and functionality of the Vue.js client application for the Wiffzack additions project. The client interacts with the Python Flask backend (`server.py`) to display data and provide user interfaces for various features.
+This is the frontend client for the Wiffzack Additions. It is a Vue 3 application built with Vite, providing a user interface for storage management, messaging, invoicing, and alarm features.
 
-## Core Concepts
+## Features
 
-### 1. Routing (`src/router/index.js`)
+- **Vue 3** with Composition API
+- **Vite** for fast development and builds
+- **Vue Router** (memory history)
+- **Vue I18n** for internationalization (German/English)
+- **FontAwesome** icon support
+- **SCSS** with custom variables and global styles
+- Modular, reusable components
+- Dynamic configuration via `/public/config.json` (overrides defaults)
+- Responsive design for touch screens and desktop
 
-Navigation within the application is handled by `vue-router`. Key routes include:
+## Project Structure
 
-*   `/data_table/:endpoint`: Displays generic tabular data fetched from the specified backend API endpoint. Uses the `DataTable` component. The `:endpoint` part of the URL determines which API endpoint is called (e.g., `/data_table/artikel` calls `/api/artikel`).
-*   `/storage/:mode`: Provides an interface for storage management (e.g., viewing, updating). Uses the `Storage` component. The `:mode` parameter likely controls the specific storage operation or view. (*Note: `Storage.vue` file not provided in context*).
-*   `/message/list`: Shows a list of available messages fetched from the backend. Uses the `MessageList` component.
-*   `/message/view/:msgPath`: Displays the content of a specific message identified by `:msgPath`. Uses the `MessageView` component.
+```
+client/
+├── index.html
+├── jsconfig.json
+├── package.json
+├── vite.config.js
+├── public/
+│   ├── config.json   # Optional: override default config
+│   └── favicon.ico
+└── src/
+    ├── App.vue
+    ├── config.default.js
+    ├── main.js
+    ├── assets/
+    │   ├── _variables.scss
+    │   └── global.scss
+    ├── components/
+    │   ├── AlarmDialog.vue
+    │   ├── ArticleList.vue
+    │   ├── DataTable.vue
+    │   ├── Header.vue
+    │   ├── InvoicePrintDialog.vue
+    │   ├── JOTD.vue
+    │   ├── MessageList.vue
+    │   ├── MessageView.vue
+    │   ├── ModalDialog.vue
+    │   ├── OnScreenKeyboard.vue
+    │   ├── QuitButton.vue
+    │   ├── Storage.vue
+    │   ├── StorageSelection.vue
+    │   └── ToggleSwitch.vue
+    ├── composables/
+    │   └── useApiData.js
+    ├── router/
+    │   └── index.js
+    └── utils/
+        └── useColor.js
+```
 
-### 2. API Interaction (`src/composables/useApiData.js`)
+## Setup
 
-A reusable composable function, `useApiData`, centralizes the logic for fetching data from the backend API.
+### Install dependencies
 
-*   **Purpose:** Handles making `axios` GET requests, managing reactive `isLoading` and `error` states, and returning the fetched `data`.
-*   **Usage:** Components import and call `useApiData`, providing the API path (e.g., `/api/message/list`) and optional configuration.
-*   **Features:**
-    *   Accepts static or reactive API paths.
-    *   Injects backend configuration (`config.backendHost`).
-    *   Provides `isLoading` and `error` refs for UI feedback.
-    *   Allows response transformation via a `transformResponse` function to adapt to different API response structures.
-    *   Handles automatic fetching on component mount or when the API path changes (controlled by the `immediate` option).
+```sh
+npm install
+```
 
-### 3. Configuration (`inject('config')`)
+### Development server
 
-Components requiring backend information (like the base URL) use Vue's `inject('config')` mechanism. This configuration is expected to be provided by a parent component or the main application setup (`main.js`, not shown) and typically includes `backendHost`.
+```sh
+npm run dev
+```
 
-## Components
+### Build for production
 
-### 1. `DataTable.vue`
+```sh
+npm run build
+```
 
-*   **Purpose:** A generic component to display data fetched from an API endpoint in an HTML table.
-*   **Props:**
-    *   `endpoint` (String, required): The specific API path segment (e.g., `artikel`, `wardrobe_sales`) to fetch data from. The component prepends `/api/` and the `backendHost`.
-*   **Functionality:** Uses the `useApiData` composable to fetch and display data based on the `endpoint` prop. Shows loading and error states via the `Header` component.
+### Preview production build
 
-### 2. `MessageList.vue`
+```sh
+npm run preview
+```
 
-*   **Purpose:** Displays a list of messages available on the server.
-*   **Functionality:** Uses `useApiData` to fetch data from the `/api/message/list` endpoint. Renders each message name as a `RouterLink` pointing to the `MessageView` component for that specific message. Uses the `Header` component for title, loading, and error states.
+## Configuration
 
-### 3. `MessageView.vue`
+- Default configuration: [`src/config.default.js`](src/config.default.js)
+- To override, create `public/config.json`. It will be merged with the defaults at runtime.
 
-*   **Purpose:** Displays the content of a single message. Supports both plain text (`txt`) and HTML (`html`) message types.
-*   **Routing:** Activated via the `/message/view/:msgPath` route. The `msgPath` parameter from the URL determines which message to fetch.
-*   **Functionality:**
-    *   Uses the `useApiData` composable with a dynamic API path based on `route.params.msgPath` (e.g., `/api/message/some-message-path`).
-    *   Conditionally renders the content based on `message.type`:
-        *   `txt`: Displays content within a `<pre>` tag.
-        *   `html`: Renders the message content within an `<iframe>`. The `iframe`'s `src` attribute points to the backend's HTML serving endpoint (`/message/html/<message_path>/`).
-    *   Uses the `Header` component to display the message name.
+Example `public/config.json`:
+```json
+{
+  "backendHost": "http://your-backend-host:5000"
+}
+```
 
-### 4. `Header.vue` (*Inferred*)
+## Internationalization
 
-*   **Purpose:** Likely a common header component used across different views.
-*   **Props (Inferred):**
-    *   `title` (String): The title to display.
-    *   `loading` (Boolean): Indicates if data is currently loading.
-    *   `error` (String/Object): Displays an error message if present.
-*   **Functionality:** Provides a consistent look and feel for page titles and displays loading/error feedback passed down from parent components using the `useApiData` composable.
+- English and German translations included.
+- Default language: German (`de`). Fallback: English (`en`).
 
-### 5. `Storage.vue` (*Inferred from Router*)
+## Usage Notes
 
-*   **Purpose:** Likely handles interactions related to storage management (viewing stock, moving items, etc.).
-*   **Routing:** Activated via `/storage/:mode`.
-*   **Functionality:** Interacts with various `/api/storage_...` and `/api/update_storage/...` backend endpoints, potentially using the `useApiData` composable or direct `axios` calls for POST requests.
+- Uses memory history for routing (supports kiosk environments).
+- SCSS variables and global styles: [`src/assets/_variables.scss`](src/assets/_variables.scss), [`src/assets/global.scss`](src/assets/global.scss)
+- FontAwesome icons are globally available as `<font-awesome-icon>`.
+- Modular components for dialogs, tables, storage, messaging, and more.
+- API endpoints and backend host are configurable.
 
-## Running the Client
+## Further Reading
 
-(Assuming standard Vue project setup)
+- [Vite Documentation](https://vite.dev/)
+- [Vue 3 Documentation](https://vuejs.org/)
+- [Vue Router](https://router.vuejs.org/)
+- [Vue I18n](https://kazupon.github.io/vue-i18n/)
 
-1.  Install dependencies: `npm install`
-2.  Run the development server: `npm run dev`
-3.  Access the application in your browser, usually at `http://localhost:5173` (or the port specified by Vite).
+## Component and Composable Descriptions
 
-Ensure the backend server (`server.py`) is running and accessible at the `backendHost` URL configured for the client.
+### Components
+
+- **AlarmDialog.vue**: Dialog for triggering an alarm for a specific client. Uses API to send alarm requests and displays modal dialogs for confirmation and errors.
+- **ArticleList.vue**: Displays a list of articles with amounts and names. Allows removal of articles via an event.
+- **DataTable.vue**: Generic table component that fetches and displays data from a specified API endpoint. Supports filtering and uses an on-screen keyboard for input.
+- **Header.vue**: Page header with a title, loading spinner, error display, and a quit button.
+- **InvoicePrintDialog.vue**: Dialog for listing, selecting, and printing invoices. Fetches invoice data from the backend and allows filtering by type.
+- **JOTD.vue**: Displays the "Joke of the Day" or message of the day, fetched from the backend.
+- **MessageList.vue**: Lists available messages from the backend. Each message links to a detailed view.
+- **MessageView.vue**: Displays the content of a selected message, supporting both text and HTML message types.
+- **ModalDialog.vue**: Generic modal dialog component for confirmations, alerts, and custom dialogs. Supports different types and button configurations.
+- **OnScreenKeyboard.vue**: On-screen keyboard for text input, supporting different search modes and emitting events for input changes.
+- **QuitButton.vue**: Button to close the application window (for kiosk environments).
+- **Storage.vue**: Main component for storage management, handling different modes (request, distribute, transfer, stock). Integrates article lists, dialogs, and storage data composable.
+- **StorageSelection.vue**: Allows selection of storage locations/terminals, highlights those with pending requests, and fetches configuration from the backend.
+- **ToggleSwitch.vue**: Simple toggle switch component for boolean options, emits toggled events.
+
+### Composables
+
+- **useApiData.js**: Generic composable for fetching data from an API endpoint. Handles loading, error, and data state, supports transformation of responses, and can be used reactively with refs or computed paths.
+- **useStorageData.js**: Composable for managing storage-related data and actions. Handles fetching storage names, article groups, articles in source/destination/transfer storage, and supports operations like inventory initialization and transfer. Provides reactive state for use in storage-related components.
+- **useColor.js**: Utility composable for color calculations. Provides functions to generate a color from a string and to determine if a color is dark, used for UI theming and contrast.
+
+---
+
+For questions or contributions, see the main project README or contact the maintainers.

@@ -1,48 +1,113 @@
-*   `GET /api/<string:client>/sales`
-    *   Retrieves the total sales figures aggregated for a specific client (waiter).
-*   `GET /api/<string:client>/tallied_articles`
-    *   Retrieves a list of articles tallied (booked) by a specific client.
-*   `GET /api/<string:client>/latest_tallied_articles`
+# Wiffzack Additions Backend API Endpoints
+
+This document outlines the API endpoints provided by the Flask backend (`server.py`).
+
+## General Response Format
+
+*   Successful GET requests typically return JSON: `{"success": true, "data": [...]}` or `{"success": true, "data": "..."}`.
+*   Successful POST/action requests often return: `{"success": true}` or `{"success": true, "message": "Details"}`.
+*   Errors usually return: `{"success": false, "message": "Error details"}`.
+*   Some GET endpoints might return HTML directly if the `Accept` header prefers `text/html` over `application/json`.
+
+## Sales & Articles
+
+*   **`GET /api/<string:client>/sales`**
+    *   Retrieves total sales figures aggregated for a specific client (waiter).
+*   **`GET /api/<string:client>/tallied_articles`**
+    *   Retrieves a list of all articles tallied (booked) by a specific client.
+*   **`GET /api/<string:client>/latest_tallied_articles`**
     *   Retrieves the most recently tallied articles for a specific client.
-*   `GET /api/wardrobe_sales`
+*   **`GET /api/wardrobe_sales`**
     *   Retrieves sales data specifically related to the wardrobe.
-*   `GET /api/artikel`
-    *   Retrieves a list of all available articles (ID, name, price).
-*   `GET /api/storage_article_groups`
-    *   Retrieves all article groups associated with storage.
-*   `GET /api/storage_article_groups/<int:storage_id>`
-    *   Retrieves the article groups present within a specific storage location.
-*   `GET /api/storage_article_by_group/<int:group>`
+*   **`GET /api/artikel`**
+    *   Retrieves a basic list of all available articles (ID, name, price).
+    *   Schema: `[{"artikel_id": int, "artikel_bezeichnung": str, "artikel_ep": float}]`
+*   **`GET /api/articles`**
+    *   Retrieves detailed information for all articles.
+*   **`GET /api/articles/<int:article_id>`**
+    *   Retrieves detailed information for a specific article by its ID.
+
+## Storage Management
+
+*   **`GET /api/storage_article_groups`**
+    *   Retrieves all article groups relevant to storage.
+*   **`GET /api/storage_article_groups/<int:storage_id>`**
+    *   Retrieves article groups present within a specific storage location.
+*   **`GET /api/storage_article_by_group/<int:group>`**
     *   Retrieves articles belonging to a specific article group within storage.
-*   `POST /api/update_storage/to/<int:to_storage_id>`
-    *   Adds articles to the specified storage. Accepts a JSON payload detailing articles and amounts. Can operate in relative (default) or absolute mode via the `method` query parameter.
-*   `POST /api/update_storage/from/<int:from_storage_id>`
-    *   Withdraws articles from the specified storage. Accepts a JSON payload detailing articles and amounts. Can operate in relative (default) or absolute mode via the `method` query parameter.
-*   `POST /api/update_storage/from/<int:from_storage_id>/to/<int:to_storage_id>`
-    *   Moves articles between the specified 'from' and 'to' storages. Accepts a JSON payload detailing articles and amounts. Can operate in relative (default) or absolute mode via the `method` query parameter.
-*   `GET /api/get_articles_in_storage/<int:storage_id>`
+*   **`POST /api/update_storage/to/<int:to_storage_id>`**
+    *   Adds articles to the specified storage.
+    *   **Request Body (JSON):** A dictionary of articles to update, e.g., `{"item1": {"id": 101, "name": "Article A", "amount": 5}}`.
+    *   **Query Parameters:** `method` (optional, string): If set to `"absolute"`, amounts are treated as absolute values; otherwise, they are relative changes.
+*   **`POST /api/update_storage/from/<int:from_storage_id>`**
+    *   Withdraws articles from the specified storage.
+    *   **Request Body (JSON):** (Same as above)
+    *   **Query Parameters:** `method` (optional, string): (Same as above)
+*   **`POST /api/update_storage/from/<int:from_storage_id>/to/<int:to_storage_id>`**
+    *   Moves articles between the specified 'from' and 'to' storages.
+    *   **Request Body (JSON):** (Same as above)
+    *   **Query Parameters:** `method` (optional, string): (Same as above)
+*   **`GET /api/empty_storage/<int:storage_id>`**
+    *   Removes all stock (sets quantities to zero) from a specified storage.
+*   **`GET /api/get_articles_in_storage/<int:storage_id>`**
     *   Retrieves a list of articles and their amounts currently in the specified storage.
-*   `GET /api/get_articles_in_storage/<int:storage_id>/article_group/<int:article_group_id>`
+    *   **Query Parameters:** `show_not_in_stock` (optional, string): If set to `"1"`, articles with zero quantity are also included.
+*   **`GET /api/get_articles_in_storage/<int:storage_id>/article_group/<int:article_group_id>`**
     *   Retrieves a list of articles and their amounts currently in the specified storage, filtered by a specific article group.
-*   `GET /api/get_storage_name/<int:storage_id>`
+    *   **Query Parameters:** `show_not_in_stock` (optional, string): (Same as above)
+*   **`GET /api/get_storage_name/<int:storage_id>`**
     *   Retrieves the name of the specified storage location.
-*   `GET /api/get_config/<string:terminal_id>`
-    *   Retrieves configuration settings specific to the given terminal ID from the `config.toml` file.
-*   `GET /api/set_init_inventory/storage/<int:storage_id>`
-    *   Sets the inventory count for articles in the specified storage based on data read from a corresponding CSV file (e.g., `StorageName.csv`). This effectively initializes or resets the stock count.
-*   `GET /api/invoice/list`
+*   **`GET /api/set_init_inventory/storage/<int:storage_id>`**
+    *   Sets the inventory count for articles in the specified storage based on data read from a corresponding CSV file on the server (e.g., `init_stock_directory/StorageName.csv`). This effectively initializes or resets the stock count to the values in the CSV.
+
+## Invoices
+
+*   **`GET /api/invoice/list`**
     *   Retrieves a list of all invoices.
-*   `GET /api/invoice/list/<string:waiter>`
-    *   Retrieves a list of invoices filtered by a specific waiter.
-*   `GET /api/invoice/print/<int:invoice_id>`
-    *   Sends a request to the background print service to print the specified invoice ID (ESC/POS format).
-*   `GET /api/invoice/html/<int:invoice_id>`
-    *   Retrieves the HTML representation of the specified invoice from the background print service.
-*   `GET /api/message/list`
-    *   Retrieves a list of available messages (metadata like path, name, type) from the configured message directory.
-*   `GET /api/message/<string:message_path>`
-    *   Retrieves the full details (including content for 'txt' type) of a specific message identified by its path segment.
-*   `GET /message/html/<string:message_path>/`
-    *   Serves the primary HTML file (e.g., `message_name.html`) for an HTML-type message. Used for rendering in an iframe.
-*   `GET /message/html/<string:message_path>/<string:file>`
-    *   Serves auxiliary files (like CSS, JS, images) associated with an HTML-type message, allowing the main HTML file to reference them correctly.
+    *   **Query Parameters:** `invoice_type` (optional, integer): Filters invoices by a specific type ID.
+*   **`GET /api/invoice/list/<string:waiter>`**
+    *   Retrieves a list of invoices filtered by a specific waiter's short name.
+    *   **Query Parameters:** `invoice_type` (optional, integer): Filters invoices by a specific type ID.
+*   **`GET /api/invoice/print/<int:invoice_id>`**
+    *   Triggers the printing of the specified invoice via the `print_service.py` (typically ESC/POS format).
+*   **`GET /api/invoice/html/<int:invoice_id>`**
+    *   Retrieves an HTML representation of the specified invoice, generated by `print_service.py`.
+*   **`GET /api/invoice_type`**
+    *   Retrieves a list of all available invoice types.
+*   **`GET /api/invoice_type/<int:invoice_type_id>`**
+    *   Retrieves details for a specific invoice type by its ID.
+
+## Messages
+
+*   **`GET /api/message/list`**
+    *   Retrieves a list of available predefined messages (metadata: name, path, type, etc.).
+*   **`GET /api/message/<string:message_path>`**
+    *   Retrieves the full details, including content (for 'txt' type), of a specific message identified by its path segment.
+*   **`GET /message/html/<string:message_path>/`**
+    *   Serves the primary HTML file (e.g., `message_name.html`) for an HTML-type message. Intended for use as an `<iframe>` source.
+*   **`GET /message/html/<string:message_path>/<path:path>`**
+    *   Serves auxiliary static files (like CSS, JS, images) associated with an HTML-type message. The `<path:path>` variable represents the relative path to the asset within the message's directory.
+
+## Recipes
+
+*   **`GET /api/recipe/list`**
+    *   Retrieves a list of available recipes from the database.
+
+## System & Configuration
+
+*   **`GET /api/get_config`**
+    *   Retrieves general terminal configuration settings from the server's `config.toml`.
+*   **`GET /api/get_config/<string:terminal_id>`**
+    *   Retrieves configuration settings specific to the given terminal ID from the server's `config.toml`.
+*   **`GET /api/restart`**
+    *   Signals the server to restart by creating a `.restart` flag file. An external watchdog process is expected to monitor this file and perform the actual restart.
+*   **`GET /api/alarm/trigger/<string:location>`**
+    *   Triggers an external alarm system by making a GET request to a URL configured in `config.toml` (under `alarm.url`), substituting the provided `location`.
+*   **`GET /api/jotd`**
+    *   Retrieves a random "Joke of the Day" from a local `stupidstuff.json` file. Returns JSON if `Accept: application/json` is preferred, otherwise plaintext.
+
+## Vue App & Static Content
+
+*   **`GET /`**
+*   **`GET /<path:path>`**
+    *   These routes serve the Vue.js single-page application (`index.html`) and its static assets (JS, CSS, images, etc.) from the `client/dist` directory. If `<path:path>` does not match a static file, `index.html` is served to enable client-side routing.
