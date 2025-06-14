@@ -334,7 +334,7 @@ class Database:
             and tisch_bondetail_bon = tisch_bon_id
             and tisch_bon_kellner = kellner_id
             and checkpoint_tag is null
-            and kellner_kurzName like '%garderobe%'
+            and tischbereich_name like '%GARDEROBE%'
             group by kellner_kurzName, tischbereich_kurzName + '-' + cast(tisch_pri_nummer as VARCHAR), tischbereich_istAufwand
         """
         rows: DBResult = self.execute_query(query)
