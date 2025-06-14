@@ -185,7 +185,7 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
         "method") == "absolute" else False
     logger.debug(f"Moving from {from_storage_id} to {to_storage_id}")
     logger.debug(articles)
-    if articles is None:
+    if articles is None or len(articles) == 0:
         return jsonify({'success': False})
 
     if from_storage_id is not None:
