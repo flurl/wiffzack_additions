@@ -73,12 +73,12 @@ class MenuButton(object):
             frame, text=u"Menü", width=100, height=50, font=("Helvetica", 24, "bold"))
 
         # Create the Menu object
-        self.menu: Menu = Menu(self.menuBtn)
+        self.menu: Menu = Menu(self.menuBtn, tearoff=0)
 
         self.menu.add_command(label="Artikel", underline=0,
                               command=self.get_articles, font=("Helvetica", 18, "bold"))
 
-        storageMenu: Menu = Menu(self.menu)
+        storageMenu: Menu = Menu(self.menu, tearoff=0)
         storageMenu.add_command(label="Ware anfordern", underline=0,
                                 command=lambda: self.open_storage_mask("request"), font=("Helvetica", 18, "bold"))
         storageMenu.add_command(label="Ware annehmen", underline=0,
@@ -88,7 +88,7 @@ class MenuButton(object):
         self.menu.add_cascade(label='Lager', menu=storageMenu,
                               underline=0, font=("Helvetica", 18, "bold"))
 
-        salesMenu: Menu = Menu(self.menu)
+        salesMenu: Menu = Menu(self.menu, tearoff=0)
         salesMenu.add_command(label="Umsatz", underline=0,
                               command=self.get_sales, font=("Helvetica", 18, "bold"))
         salesMenu.add_command(label="Bonierte Artikel", underline=0,
@@ -109,7 +109,7 @@ class MenuButton(object):
         self.menu.add_command(label="Rezepturen", underline=0,
                               command=self.show_receipes, font=("Helvetica", 18, "bold"))
 
-        systemMenu: Menu = Menu(self.menu)
+        systemMenu: Menu = Menu(self.menu, tearoff=0)
         systemMenu.add_command(label='Logout', underline=0,
                                command=self.logout, font=("Helvetica", 18, "bold"))
         systemMenu.add_command(label='Reboot', underline=0,
@@ -117,14 +117,14 @@ class MenuButton(object):
         self.menu.add_cascade(label='System', menu=systemMenu,
                               underline=0, font=("Helvetica", 18, "bold"))
 
-        alarmMenu: Menu = Menu(self.menu)
+        alarmMenu: Menu = Menu(self.menu, tearoff=0)
         alarmMenu.add_command(label='Alarm', underline=0,
                               command=self.open_alarm_dlg, font=("Helvetica", 18, "bold"))
         self.menu.add_separator()
         self.menu.add_cascade(label='Alarm', menu=alarmMenu,
                               underline=0, font=("Helvetica", 18, "bold"))
 
-        self.easter_egg_menu: Menu = Menu(self.menu)
+        self.easter_egg_menu: Menu = Menu(self.menu, tearoff=0)
         self.make_easter_egg_menu()
         self.menu.add_cascade(
             label='Admin only', menu=self.easter_egg_menu, font=("Helvetica", 18, "bold"))
@@ -132,7 +132,7 @@ class MenuButton(object):
             postcommand=lambda: self.make_easter_egg_menu())
 
         if config["client"]["debug"]:
-            debugMenu: Menu = Menu(self.menu)
+            debugMenu: Menu = Menu(self.menu, tearoff=0)
             debugMenu.add_command(label="Restart server process", underline=0,
                                   command=self.request_server_process_restart, font=("Helvetica", 18, "bold"))
             self.menu.add_separator()
@@ -258,10 +258,10 @@ class MenuButton(object):
         ]
         self.easter_egg_menu.delete(0, 'end')
 
-        level1_menu: Menu = Menu(self.easter_egg_menu)
-        level2_menu: Menu = Menu(level1_menu)
-        level3_menu: Menu = Menu(level2_menu)
-        level4_menu: Menu = Menu(level3_menu)
+        level1_menu: Menu = Menu(self.easter_egg_menu, tearoff=0)
+        level2_menu: Menu = Menu(level1_menu, tearoff=0)
+        level3_menu: Menu = Menu(level2_menu, tearoff=0)
+        level4_menu: Menu = Menu(level3_menu, tearoff=0)
 
         self.easter_egg_menu.add_cascade(label=menu_labels.pop(
             random.randint(0, len(menu_labels) - 1)), menu=level1_menu,
