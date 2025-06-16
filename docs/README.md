@@ -248,3 +248,7 @@ These features aim to provide better visibility into inventory, simplify the pro
 
 *Storage management interface*
 
+![Bluetooth Beacon](images/PRINGMIA.jpg)
+
+*Bluetooth beacon*
+
