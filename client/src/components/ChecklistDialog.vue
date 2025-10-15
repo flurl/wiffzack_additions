@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUpdated } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Header from './Header.vue';
 import dragscroll from 'dragscroll';
@@ -38,7 +38,15 @@ onMounted(() => {
         checklistCategory.value = checklistCategoryParam;
     }
     fetchChecklistMasters();
+
+    document.getElementsByTagName('body')[0].classList.add('dragscroll');
+    dragscroll.reset();
 });
+
+onUpdated(() => {
+    dragscroll.reset();
+});
+
 
 const createNewChecklistMaster = async () => {
     const category = window.prompt(t('message.enter_checklist_category'));
@@ -138,7 +146,6 @@ const moveQuestionDown = (question) => {
 
 <style lang="scss" scoped>
 .wrapper {
-    height: 100vh;
     display: flex;
     flex-direction: column;
 }
@@ -156,7 +163,7 @@ const moveQuestionDown = (question) => {
 
 .checklist-list {
     max-width: 50%;
-    overflow: scroll;
+    overflow: auto;
 
     ul {
         list-style: none;
@@ -191,6 +198,9 @@ const moveQuestionDown = (question) => {
 }
 
 .checklist-detail {
+    background-color: $light-highlight;
+    padding: 1rem;
+
     .btn_done.selected {
         background-color: $light-confirm;
     }
