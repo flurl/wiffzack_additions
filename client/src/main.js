@@ -16,6 +16,7 @@ const i18n = createI18n({
       message: {
         cancel: 'Cancel',
         OK: 'OK',
+        new: "New",
         request: "Request",
         distribute: "Distribute",
         receive: "Receive",
@@ -41,13 +42,30 @@ const i18n = createI18n({
         trigger_alarm_success: "Alarm triggered",
         alarm_url_construction_error: "Alarm trigger URL could not be constructed. Configuration or Terminal ID missing.",
         sending_alarm_signal: "Sending alarm signal...",
-        terminal_id_not_found_error: "Terminal ID not found in URL. Cannot trigger alarm."
+        terminal_id_not_found_error: "Terminal ID not found in URL. Cannot trigger alarm.",
+        checklists: "Checklists",
+        new_checklist_name: "New checklist name",
+        enter_checklist_category: "Enter checklist category",
+        enter_new_checklist_name: "Enter new checklist name",
+        error_updating_checklist: "Error updating checklist",
+        error_fetching_checklists: "Error fetching checklists",
+        error_fetching_checklist_questions: "Error fetching checklist questions",
+        error_creating_checklist: "Error creating checklist",
+        error_closing_checklist: "Error closing checklist",
+        error_fetching_checklist_answers: "Error fetching checklist answers",
+        error_deleting_checklist: "Error deleting checklist",
+        confirm_delete_checklist: "Are you sure you want to delete '{name}'?",
+        done: "Done",
+        skip: "Skip",
+        close_checklist: "Close checklist",
+        save: "Save"
       }
     },
     de: {
       message: {
         cancel: 'Abbrechen',
         OK: 'OK',
+        new: "Neu",
         request: "Anfordern",
         distribute: "Verteilen",
         receive: "Empfangen",
@@ -73,7 +91,23 @@ const i18n = createI18n({
         trigger_alarm_success: "Alarm erfolgreich ausgelöst",
         alarm_url_construction_error: "Alarm-URL konnte nicht erstellt werden. Konfiguration oder Terminal-ID fehlt.",
         sending_alarm_signal: "Alarmsignal wird gesendet...",
-        terminal_id_not_found_error: "Terminal-ID nicht in URL gefunden. Alarm kann nicht ausgelöst werden."
+        terminal_id_not_found_error: "Terminal-ID nicht in URL gefunden. Alarm kann nicht ausgelöst werden.",
+        checklists: "Checklisten",
+        new_checklist_name: "Neue Checklist Name",
+        enter_checklist_category: "Checklist-Kategorie eingeben",
+        enter_new_checklist_name: "Neuen Checklistennamen eingeben",
+        error_updating_checklist: "Fehler beim Aktualisieren der Checkliste",
+        error_fetching_checklists: "Fehler beim Abrufen der Checklisten",
+        error_fetching_checklist_questions: "Fehler beim Abrufen der Checklist Fragen",
+        error_creating_checklist: "Fehler beim Erstellen der Checkliste",
+        error_closing_checklist: "Fehler beim Schließen der Checkliste",
+        error_fetching_checklist_answers: "Fehler beim Abrufen der Checklist-Antworten",
+        error_deleting_checklist: "Fehler beim Löschen der Checkliste",
+        confirm_delete_checklist: "Sind Sie sicher, dass Sie '{name}' löschen möchten?",
+        done: "Erledigt",
+        skip: "Überspringen",
+        close_checklist: "Checkliste schließen",
+        save: "Speichern"
       }
     }
   }

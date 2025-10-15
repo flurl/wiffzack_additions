@@ -7,6 +7,7 @@ import MessageView from '../components/MessageView.vue'
 import InvoicePrintDialog from '../components/InvoicePrintDialog.vue'
 import AlarmDialog from '@/components/AlarmDialog.vue'
 import JOTD from '@/components/JOTD.vue'
+import ChecklistDialog from '@/components/ChecklistDialog.vue'
 
 const router = createRouter({
   // we need memory history mode to make window.close() work
@@ -61,6 +62,12 @@ const router = createRouter({
       path: '/jotd',
       name: 'jotd',
       component: JOTD,
+      props: false,
+    },
+    {
+      path: '/checklist',
+      name: 'checklist',
+      component: ChecklistDialog,
       props: false,
     },
   ],

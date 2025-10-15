@@ -195,6 +195,10 @@ button {
     background-color: $light-cancel;
   }
 
+  &.delete {
+    background-color: $light-cancel;
+  }
+
   &.active {
     background-color: color.scale($light-button-background, $lightness: -30%);
   }

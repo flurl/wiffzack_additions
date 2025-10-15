@@ -13,12 +13,15 @@ import urllib.error
 import csv
 
 from flask import Flask, jsonify, make_response, render_template, request, send_from_directory, g
+from flask.wrappers import Response
 from flask_cors import CORS
 from werkzeug.wrappers import Response
 from wiffzack import Database
+from wiffzack.db_connection import DatabaseConnection
 from wiffzack.types import Article, StorageModifier, DBResult
 import lib.messages as messages
 from lib.config import ConfigLoader
+import lib.checklist as checklist
 
 config_loader = ConfigLoader()
 config: dict[str, Any] = config_loader.config
@@ -584,6 +587,183 @@ def get_jotd() -> Response:
         logger.error(
             f"An unexpected error occurred in get_jotd: {e}", exc_info=True)
         return mk_response(f"An unexpected error occurred: {str(e)}", heading="Error")
+
+# region Checklist related routes ---
+
+
+@app.route("/api/checklist/list", methods=["GET"])
+def get_checklists() -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    checklists: list[checklist.Checklist] = checklist.get_all_checklists(
+        dbConn)
+    return mk_response([asdict(c) for c in checklists])
+
+
+@app.route("/api/checklist/latest/<int:master_id>", methods=["GET"])
+def get_latest_checklist(master_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    cl: checklist.Checklist | None = checklist.get_latest_checklist(
+        dbConn, master_id)
+    if cl is None:
+        return jsonify({'success': False})
+    return mk_response(asdict(cl))
+
+
+@app.route("/api/checklist/close/<int:checklist_id>", methods=["GET"])
+def close_checklist(checklist_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    checklist.close_checklist(dbConn, checklist_id)
+    return jsonify({'success': True})
+
+
+@app.route("/api/checklist/master/new", methods=["POST"])
+def create_checklist_master() -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    json: Any | None = request.json
+    if json is None:
+        return jsonify({'success': False})
+    name: str = json["name"]
+    category: str = json["category"]
+    master: checklist.ChecklistMaster = checklist.create_checklist_master(
+        dbConn, name, category)
+
+    return mk_response({'id': master.id, 'name': master.name})
+
+
+@app.route("/api/checklist/master/list", methods=["GET"])
+def get_checklist_masters() -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    masters: list[checklist.ChecklistMaster] = checklist.get_all_checklist_masters(
+        dbConn)
+    return mk_response([asdict(m) for m in masters])
+
+
+@app.route("/api/checklist/master/list/category/<string:category>", methods=["GET"])
+def get_checklist_masters_by_category(category: str) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    masters: list[checklist.ChecklistMaster] = checklist.get_checklist_masters_by_category(
+        dbConn, category)
+    return mk_response([asdict(m) for m in masters])
+
+
+@app.route("/api/checklist/master/<int:master_id>", methods=["GET"])
+def get_checklist_master(master_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    master: checklist.ChecklistMaster | None = checklist.get_checklist_master(
+        dbConn, master_id)
+    if master is None:
+        return jsonify({'success': False})
+    return mk_response(asdict(master))
+
+
+@app.route("/api/checklist/master/update/<int:master_id>", methods=["POST"])
+def update_checklist_master(master_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    json_data: Any | None = request.json
+    if json_data is None:
+        return jsonify({'success': False, 'message': 'No JSON data provided'})
+    name: str = json_data["name"]
+    category: str = json_data["category"]
+    master: checklist.ChecklistMaster = checklist.ChecklistMaster(
+        id=master_id, name=name, category=category)
+    checklist.update_checklist_master(dbConn, master)
+    return jsonify({'success': True})
+
+
+@app.route("/api/checklist/master/delete/<int:master_id>", methods=["GET"])
+def delete_checklist_master(master_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    checklist.delete_checklist_master(dbConn, master_id)
+    return jsonify({'success': True})
+
+
+@app.route("/api/checklist/master/<int:master_id>/questions", methods=["GET"])
+def get_questions_for_master(master_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    questions: list[checklist.ChecklistQuestion] = checklist.get_questions_for_master(
+        dbConn, master_id)
+    return mk_response([asdict(q) for q in questions])
+
+
+@app.route("/api/checklist/question/new", methods=["POST"])
+def create_checklist_question() -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    json: Any | None = request.json
+    if json is None:
+        return jsonify({'success': False})
+    master_id: int = json["master_id"]
+    order: int = json["order"]
+    text: str = json["text"]
+    question: checklist.ChecklistQuestion = checklist.create_checklist_question(
+        dbConn, text, order, master_id)
+    return mk_response(asdict(question))
+
+
+@app.route("/api/checklist/question/<int:question_id>", methods=["GET"])
+def get_checklist_question(question_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    question: checklist.ChecklistQuestion | None = checklist.get_checklist_question(
+        dbConn, question_id)
+    if question is None:
+        return jsonify({'success': False})
+    return mk_response(asdict(question))
+
+
+@app.route("/api/checklist/question/update/<int:question_id>", methods=["POST"])
+def update_checklist_question(question_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    json: Any | None = request.json
+    if json is None:
+        return jsonify({'success': False})
+    master_id: int = json["master_id"]
+    order: int = json["order"]
+    text: str = json["text"]
+    question: checklist.ChecklistQuestion = checklist.ChecklistQuestion(
+        id=question_id, text=text, order=order, master_id=master_id)
+    checklist.update_checklist_question(
+        dbConn, question)
+    return jsonify({'success': True})
+
+
+@app.route("/api/checklist/question/delete/<int:question_id>", methods=["GET"])
+def delete_checklist_question(question_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    checklist.delete_checklist_question(dbConn, question_id)
+    return jsonify({'success': True})
+
+
+@app.route("/api/checklist/new_from_master/<int:master_id>", methods=["GET"])
+def create_checklist_from_master(master_id: int):
+    dbConn: DatabaseConnection = get_db().connection
+    checklist.create_checklist_from_master(dbConn, master_id)
+    return jsonify({'success': True})
+
+
+@app.route("/api/checklist/answers/<int:checklist_id>", methods=["GET"])
+def get_checklist_answers(checklist_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    answers: list[checklist.ChecklistAnswer] = checklist.get_answers_for_checklist(
+        dbConn, checklist_id)
+    return mk_response([asdict(a) for a in answers])
+
+
+@app.route("/api/checklist/answer/update/<int:answer_id>", methods=["POST"])
+def create_checklist_answer(answer_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    json: Any | None = request.json
+    if json is None:
+        return jsonify({'success': False})
+    choice: bool = json["choice"]
+    question_text: str = json["question_text"]
+    checklist_id: int = json["checklist_id"]
+    answer: checklist.ChecklistAnswer = checklist.ChecklistAnswer(
+        id=answer_id, choice=choice, question_text=question_text, checklist_id=checklist_id)
+    checklist.update_checklist_answer(dbConn, answer)
+    return jsonify({'success': True})
+
+
+# endregion Checklist related routes ---
+
 # --- End API Routes ---
 
 # --- Catch-all route for Vue App ---
