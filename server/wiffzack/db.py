@@ -34,3 +34,11 @@ class Database:
             return getattr(self._connection, name)
         raise AttributeError(
             f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    @property
+    def connection(self) -> DatabaseConnection:
+        return self._connection
+
+    @property
+    def repository(self) -> DatabaseRepository:
+        return self._repository
