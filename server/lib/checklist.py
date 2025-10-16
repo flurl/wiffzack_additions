@@ -52,9 +52,9 @@ def create_checklist_from_master(db: "DatabaseConnection", master_id: int) -> Ch
         id=result[0][0], datum=result[0][1], completed=result[0][2], master_name=result[0][3])
     # if the checklist was successfully created, insert the answers
     query = """
-        insert into checklist_answers (cha_chkid, cha_question_text, cha_choice)
-        OUTPUT INSERTED.cha_id, INSERTED.cha_chkid, INSERTED.cha_question_text, INSERTED.cha_choice
-        select %s, chq_text, null
+        insert into checklist_answers (cha_chkid, cha_question_text, cha_choice, cha_order)
+        OUTPUT INSERTED.cha_id, INSERTED.cha_chkid, INSERTED.cha_question_text, INSERTED.cha_choice, INSERTED.cha_order
+        select %s, chq_text, null, chq_order
         from checklist_questions
         where chq_chmid = %s"""
     result = db.execute_query(query, (checklist.id, master_id,))
@@ -278,7 +278,7 @@ def get_checklist_answer(db: "DatabaseConnection", answer_id: int) -> Optional[C
 
 def get_answers_for_checklist(db: "DatabaseConnection", checklist_id: int) -> list[ChecklistAnswer]:
     """Retrieves all answers for a given checklist instance."""
-    query = "SELECT cha_id, cha_chkid, cha_question_text, cha_choice FROM checklist_answers WHERE cha_chkid = %d"
+    query = "SELECT cha_id, cha_chkid, cha_question_text, cha_choice FROM checklist_answers WHERE cha_chkid = %d order by cha_order"
     results: DBResult = db.execute_query(query, (checklist_id,))
     if not results:
         return []
