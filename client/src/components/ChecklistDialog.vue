@@ -121,7 +121,7 @@ const moveQuestionDown = (question) => {
                                     t('message.skip') }}</button>
                         </li>
                     </ul>
-                    <button v-if="checklistAnswers.length >= 0" @click="closeChecklist">{{
+                    <button v-if="checklistAnswers.length > 0" @click="closeChecklist">{{
                         t('message.close_checklist') }}</button>
                 </template>
                 <template v-if="mode === 'edit'">
