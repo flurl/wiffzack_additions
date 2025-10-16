@@ -853,7 +853,7 @@ def test_api_get_latest_checklist(monkeypatch):
     mock_checklist = checklist.Checklist(
         id=1, datum=None, completed=False, master_name="Morning")
     monkeypatch.setattr(server.checklist, "get_latest_checklist",
-                        lambda db, master_id: mock_checklist)
+                        lambda db, master_id, expiry: mock_checklist)
     with app.test_client() as client:
         resp = client.get("/api/checklist/latest/1")
         assert resp.status_code == 200
@@ -867,7 +867,7 @@ def test_api_get_latest_checklist(monkeypatch):
 def test_api_get_latest_checklist_none(monkeypatch):
     app = server.app
     monkeypatch.setattr(
-        server.checklist, "get_latest_checklist", lambda db, master_id: None)
+        server.checklist, "get_latest_checklist", lambda db, master_id, expiry: None)
     with app.test_client() as client:
         resp = client.get("/api/checklist/latest/1")
         assert resp.status_code == 200

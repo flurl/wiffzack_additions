@@ -18,6 +18,11 @@ init_stock_directory = "assets/init/"
 url = "http://192.168.202.1/alarm_trigger.php?location={location}"
 
 
+[checklist]
+# a new checklist expires after that amount of minutes
+expiry_mins = 30
+
+
 [terminal_config]
 
 [terminal_config.lager]

@@ -603,7 +603,7 @@ def get_checklists() -> Response:
 def get_latest_checklist(master_id: int) -> Response:
     dbConn: DatabaseConnection = get_db().connection
     cl: checklist.Checklist | None = checklist.get_latest_checklist(
-        dbConn, master_id)
+        dbConn, master_id, config["checklist"]["expiry_mins"])
     if cl is None:
         return jsonify({'success': False})
     return mk_response(asdict(cl))

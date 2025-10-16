@@ -64,15 +64,28 @@ def create_checklist_from_master(db: "DatabaseConnection", master_id: int) -> Ch
     return checklist
 
 
-def get_latest_checklist(db: "DatabaseConnection", master_id: int) -> Optional[Checklist]:
+def get_latest_checklist(db: "DatabaseConnection", master_id: int, expiry: int) -> Optional[Checklist]:
+    """
+    Retrieves the latest checklist for a given master ID that is not yet completed
+    and has been created within the specified expiry time.
+
+    Parameters:
+    - db (DatabaseConnection): The database connection object.
+    - master_id (int): The ID of the checklist master.
+    - expiry (int): The expiry time in minutes.
+
+    Returns:
+    - Optional[Checklist]: The latest Checklist object if found, otherwise None.
+    """
     query: LiteralString = """
         select top 1 chk_id, chk_datum, chk_completed, chk_master_name
         from checklists
         where chk_master_name = (select chm_name from checklist_master where chm_id = %s)
-        and chk_completed = 0
+        and chk_completed = 0 
+        and chk_datum >= DATEADD(minute, -%s, GETUTCDATE())
         order by chk_datum desc
     """
-    result: DBResult = db.execute_query(query, (master_id,))
+    result: DBResult = db.execute_query(query, (master_id, expiry))
     if not result:
         return None
     return Checklist(id=result[0][0], datum=result[0][1], completed=result[0][2], master_name=result[0][3])
