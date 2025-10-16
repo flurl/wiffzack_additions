@@ -1,6 +1,6 @@
 # type: ignore
 import types
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, ANY
 import pathlib
 from pathlib import Path
 import io
@@ -10,7 +10,7 @@ from flask import Flask, Response
 import pytest
 
 import server
-from lib.messages import Message
+from lib import messages, checklist
 
 # Test mk_response returns JSON when Accept header is application/json
 
@@ -134,9 +134,10 @@ def test_api_get_messages(monkeypatch):
     # Patch messages.get_messages_list to return a dummy list of messages
     monkeypatch.setattr(
         server.messages, "get_messages_list", lambda: [
-            Message(path="foo", name="bar", type="txt", content="hello"),
-            Message(path="bob", name="alice", type="txt",
-                    content="hello from bob to alice")
+            messages.Message(path="foo", name="bar",
+                             type="txt", content="hello"),
+            messages.Message(path="bob", name="alice", type="txt",
+                             content="hello from bob to alice")
         ])
     with app.test_client() as client:
         resp = client.get("/api/message/list")
@@ -154,7 +155,7 @@ def test_api_get_messages(monkeypatch):
 def test_api_send_message(monkeypatch):
     app = server.app
     monkeypatch.setattr(server.messages, "get_message",
-                        lambda path: Message(path="foo", name="bar", type="txt", content="hello"))
+                        lambda path: messages.Message(path="foo", name="bar", type="txt", content="hello"))
     with app.test_client() as client:
         resp = client.get("/api/message/foo")
         assert resp.status_code == 200
@@ -169,7 +170,7 @@ def test_api_send_html_message(monkeypatch):
     app = server.app
     # Patch messages.get_message to return a dummy HTML message
     monkeypatch.setattr(server.messages, "get_message",
-                        lambda path: Message(path="foo", name="bar", type="html", content="<h1>hello</h1>"))
+                        lambda path: messages.Message(path="foo", name="bar", type="html", content="<h1>hello</h1>"))
     # Patch send_from_directory to return a dummy HTML response
     monkeypatch.setattr(server, "send_from_directory", lambda folder, filename: Response(
         "<h1>hello</h1>", status=200, mimetype="text/html"))
@@ -721,3 +722,222 @@ def test_teardown_db_no_db():
         from flask import g
         # No db in g
         server.teardown_db(None)  # Should not raise
+
+
+# region Checklist Tests
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_get_checklist_masters(monkeypatch):
+    app = server.app
+    mock_masters = [
+        checklist.ChecklistMaster(id=1, name="Morning", category="Daily"),
+        checklist.ChecklistMaster(id=2, name="Evening", category="Daily")
+    ]
+    monkeypatch.setattr(
+        server.checklist, "get_all_checklist_masters", lambda db: mock_masters)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/master/list")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert len(data["data"]) == 2
+        assert data["data"][0]['name'] == "Morning"
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_create_checklist_master(monkeypatch):
+    app = server.app
+    mock_master = checklist.ChecklistMaster(id=3, name="New", category="Test")
+    monkeypatch.setattr(
+        server.checklist, "create_checklist_master", lambda db, name, cat: mock_master)
+    with app.test_client() as client:
+        resp = client.post("/api/checklist/master/new",
+                           json={"name": "New", "category": "Test"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["data"]["id"] == 3
+        assert data["data"]["name"] == "New"
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_update_checklist_master(monkeypatch):
+    app = server.app
+    # The function doesn't return anything, so we just need to check it's called
+    mock_update = MagicMock()
+    monkeypatch.setattr(
+        server.checklist, "update_checklist_master", mock_update)
+    with app.test_client() as client:
+        resp = client.post("/api/checklist/master/update/1",
+                           json={"name": "Updated", "category": "Daily"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        mock_update.assert_called_once()
+        # Check that the arguments passed to the mock are correct
+        call_args = mock_update.call_args[0]
+        assert isinstance(call_args[1], checklist.ChecklistMaster)
+        assert call_args[1].id == 1
+        assert call_args[1].name == "Updated"
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_delete_checklist_master(monkeypatch):
+    app = server.app
+    mock_delete = MagicMock()
+    monkeypatch.setattr(
+        server.checklist, "delete_checklist_master", mock_delete)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/master/delete/1")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        mock_delete.assert_called_once_with(ANY, 1)
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_get_questions_for_master(monkeypatch):
+    app = server.app
+    mock_questions = [
+        checklist.ChecklistQuestion(id=1, text="Q1", order=1, master_id=1),
+        checklist.ChecklistQuestion(id=2, text="Q2", order=2, master_id=1)
+    ]
+    monkeypatch.setattr(server.checklist, "get_questions_for_master",
+                        lambda db, master_id: mock_questions)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/master/1/questions")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert len(data["data"]) == 2
+        assert data["data"][0]['text'] == "Q1"
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_update_checklist_question(monkeypatch):
+    app = server.app
+    mock_update = MagicMock()
+    monkeypatch.setattr(
+        server.checklist, "update_checklist_question", mock_update)
+    with app.test_client() as client:
+        question_data = {"text": "Updated Q", "order": 1, "master_id": 1}
+        resp = client.post(
+            "/api/checklist/question/update/1", json=question_data)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        mock_update.assert_called_once()
+        call_args = mock_update.call_args[0]
+        assert isinstance(call_args[1], checklist.ChecklistQuestion)
+        assert call_args[1].id == 1
+        assert call_args[1].text == "Updated Q"
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_create_checklist_from_master(monkeypatch):
+    app = server.app
+    mock_create = MagicMock()
+    monkeypatch.setattr(
+        server.checklist, "create_checklist_from_master", mock_create)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/new_from_master/1")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        mock_create.assert_called_once_with(ANY, 1)
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_get_latest_checklist(monkeypatch):
+    app = server.app
+    mock_checklist = checklist.Checklist(
+        id=1, datum=None, completed=False, master_name="Morning")
+    monkeypatch.setattr(server.checklist, "get_latest_checklist",
+                        lambda db, master_id: mock_checklist)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/latest/1")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["data"]["id"] == 1
+        assert data["data"]["master_name"] == "Morning"
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_get_latest_checklist_none(monkeypatch):
+    app = server.app
+    monkeypatch.setattr(
+        server.checklist, "get_latest_checklist", lambda db, master_id: None)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/latest/1")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is False
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_get_checklist_answers(monkeypatch):
+    app = server.app
+    mock_answers = [
+        checklist.ChecklistAnswer(
+            id=1, checklist_id=1, question_text="Q1", choice=True),
+        checklist.ChecklistAnswer(
+            id=2, checklist_id=1, question_text="Q2", choice=None)
+    ]
+    monkeypatch.setattr(
+        server.checklist, "get_answers_for_checklist", lambda db, chk_id: mock_answers)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/answers/1")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert len(data["data"]) == 2
+        assert data["data"][0]["choice"] is True
+        assert data["data"][1]["choice"] is None
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_update_checklist_answer(monkeypatch):
+    app = server.app
+    mock_update = MagicMock()
+    monkeypatch.setattr(
+        server.checklist, "update_checklist_answer", mock_update)
+    with app.test_client() as client:
+        answer_data = {"choice": False,
+                       "question_text": "Q1", "checklist_id": 1}
+        resp = client.post("/api/checklist/answer/update/1", json=answer_data)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        mock_update.assert_called_once()
+        call_args = mock_update.call_args[0]
+        assert isinstance(call_args[1], checklist.ChecklistAnswer)
+        assert call_args[1].id == 1
+        assert call_args[1].choice is False
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_close_checklist(monkeypatch):
+    app = server.app
+    mock_close = MagicMock()
+    monkeypatch.setattr(server.checklist, "close_checklist", mock_close)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/close/1")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        mock_close.assert_called_once_with(ANY, 1)
+
+
+@pytest.fixture()
+def mock_db_for_checklist_tests(monkeypatch):
+    """
+    Automatically mock get_db for all checklist tests to avoid real DB connection.
+    The mock DB object has a `connection` attribute which is also a mock,
+    so `get_db().connection` works as expected in the route handlers.
+    """
+    mock_db_instance = MagicMock()
+    mock_db_instance.connection = MagicMock()
+    monkeypatch.setattr(server, "get_db", lambda: mock_db_instance)
+
+# endregion Checklist Tests
