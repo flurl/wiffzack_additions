@@ -39,8 +39,10 @@ onMounted(() => {
     }
     fetchChecklistMasters();
 
-    document.getElementsByTagName('body')[0].classList.add('dragscroll');
-    dragscroll.reset();
+    if (mode.value !== 'edit') {
+        document.getElementsByTagName('body')[0].classList.add('dragscroll');
+        dragscroll.reset();
+    }
 });
 
 onUpdated(() => {
