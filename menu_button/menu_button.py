@@ -9,13 +9,10 @@ from typing import LiteralString, Any
 from pathlib import Path
 import urllib.request
 
-from PIL import Image, ImageTk
 from tkinter import (
     Tk, Frame, Menubutton, Menu, messagebox,
-    Toplevel, Label, Button
+    Toplevel, Label, Button, PhotoImage
 )
-
-from PIL.ImageFile import ImageFile
 
 
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
@@ -288,9 +285,8 @@ class MenuButton(object):
         content_frame.pack(padx=20, pady=20)
 
         try:
-            img_path: Path = SCRIPT_DIR / "vasnarr_is_watching_you.png"
-            pil_img: ImageFile = Image.open(img_path)
-            tk_img = ImageTk.PhotoImage(pil_img)
+            img_path: Path = SCRIPT_DIR / "vasnarr_is_watching_you.gif"
+            tk_img = PhotoImage(file=str(img_path))
             img_label = Label(content_frame, image=tk_img)
             # img_label.image = tk_img  # Keep a reference!
             img_label.pack(side="left", padx=(0, 15))
