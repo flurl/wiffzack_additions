@@ -183,7 +183,7 @@ class MenuButton(object):
 
     def show_checklists(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{FRONTEND_URLS['checklists']}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['checklists'].format(client=CLIENT_NAME)}")
 
     def show_messages(self) -> None:
         self.open_browser(
