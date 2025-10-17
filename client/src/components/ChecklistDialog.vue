@@ -1,11 +1,15 @@
 <script setup>
-import { ref, onMounted, onUpdated } from 'vue';
+import { ref, onMounted, onUpdated } from 'vue'; // Removed useTemplateRef
 import { useI18n } from 'vue-i18n';
 import Header from './Header.vue';
+import ModalDialog from './ModalDialog.vue';
 import dragscroll from 'dragscroll';
 import { useChecklist } from '../composables/useChecklist';
 
 const { t } = useI18n();
+const showModal = ref(false); // Reactive state to control the ModalDialog's visibility
+const modalMessage = ref('');
+
 
 const mode = ref('complete');
 const checklistCategory = ref(null);
@@ -23,7 +27,7 @@ const {
     deleteChecklistMaster,
     saveChecklistMasterQuestions,
     createNewChecklist,
-    closeChecklist,
+    closeChecklist: closeChecklistAction,
     updateChecklistAnswer,
 } = useChecklist({ mode, checklistCategory, currentChecklistMaster });
 
@@ -77,9 +81,22 @@ const moveQuestionDown = (question) => {
         [checklistMasterQuestions.value[index + 1], checklistMasterQuestions.value[index]] = [checklistMasterQuestions.value[index], checklistMasterQuestions.value[index + 1]];
     }
 };
+
+const handleCloseChecklist = async () => {
+    const success = await closeChecklistAction();
+    if (success) {
+        modalMessage.value = t('message.success');
+    } else {
+        modalMessage.value = error.value || t('message.error_closing_checklist');
+    }
+    showModal.value = true;
+};
 </script>
 
 <template>
+    <ModalDialog :show="showModal" :buttons="{ ok: true, cancel: false }" @ok="showModal = false">
+        <p>{{ modalMessage }}</p>
+    </ModalDialog>
     <div class="wrapper">
         <Header :title="t('message.checklists')" :loading="isLoading" :error="error" />
         <div class="checklists-wrapper">
@@ -121,7 +138,7 @@ const moveQuestionDown = (question) => {
                                     t('message.skip') }}</button>
                         </li>
                     </ul>
-                    <button v-if="checklistAnswers.length > 0" @click="closeChecklist">{{
+                    <button v-if="checklistAnswers.length > 0" @click="handleCloseChecklist">{{
                         t('message.close_checklist') }}</button>
                 </template>
                 <template v-if="mode === 'edit'">

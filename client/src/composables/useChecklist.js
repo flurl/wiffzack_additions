@@ -119,13 +119,19 @@ export function useChecklist(options = {}) {
     };
 
     const closeChecklist = async () => {
-        if (!currentChecklistId.value) return;
+        if (!currentChecklistId.value) {
+            error.value = 'No checklist selected to close.';
+            return false;
+        }
+        let success = false;
         await executeRequest(async () => {
             const response = await axios.get(`${config.backendHost}/api/checklist/close/${currentChecklistId.value}`);
             if (response.data?.success) {
                 await fetchLatestChecklist();
+                success = true;
             }
         });
+        return success;
     };
 
     const fetchChecklistAnswers = async () => {
