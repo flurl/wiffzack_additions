@@ -59,7 +59,7 @@ FRONTEND_URLS: dict[str, str] = {
     "request_restart": "/api/restart",
     "alarm": "/alarm?terminal={client}",
     "jotd": "/jotd",
-    "checklists": "/checklist?mode=complete&category={client}"
+    "checklists": "/checklist?mode=complete&checklist_category={client}"
 }
 
 BACKEND_URLS: dict[str, str] = {
