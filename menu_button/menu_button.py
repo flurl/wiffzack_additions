@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import subprocess
 import tomllib
 import os
@@ -8,9 +9,13 @@ from typing import LiteralString, Any
 from pathlib import Path
 import urllib.request
 
+from PIL import Image, ImageTk
 from tkinter import (
-    Tk, Frame, Menubutton, Menu, messagebox
+    Tk, Frame, Menubutton, Menu, messagebox,
+    Toplevel, Label, Button
 )
+
+from PIL.ImageFile import ImageFile
 
 
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
@@ -56,7 +61,12 @@ FRONTEND_URLS: dict[str, str] = {
     "receipes": "/data_table/recipe/list?groupByColumn=0",
     "request_restart": "/api/restart",
     "alarm": "/alarm?terminal={client}",
-    "jotd": "/jotd"
+    "jotd": "/jotd",
+    "checklists": "/checklist?mode=complete&category={client}"
+}
+
+BACKEND_URLS: dict[str, str] = {
+    "check_for_closed_checklists": "/api/checklist/latest/by_category/{client}"
 }
 
 CLIENT_NAME: LiteralString = config['client']['name']
@@ -102,6 +112,9 @@ class MenuButton(object):
 
         self.menu.add_command(label="Rechnungen", underline=0,
                               command=self.open_invoices_dlg, font=("Helvetica", 18, "bold"))
+
+        self.menu.add_command(label="Checklisten", underline=0,
+                              command=self.show_checklists, font=("Helvetica", 18, "bold"))
 
         self.menu.add_command(label="Nachrichten", underline=0,
                               command=self.show_messages, font=("Helvetica", 18, "bold"))
@@ -171,6 +184,10 @@ class MenuButton(object):
         self.open_browser(
             f"http://{WEB_SERVER}{FRONTEND_URLS['invoices_dlg'].format(client=CLIENT_NAME)}")
 
+    def show_checklists(self) -> None:
+        self.open_browser(
+            f"http://{WEB_SERVER}{FRONTEND_URLS['checklists']}")
+
     def show_messages(self) -> None:
         self.open_browser(
             f"http://{WEB_SERVER}{FRONTEND_URLS['messages']}")
@@ -189,7 +206,10 @@ class MenuButton(object):
             root.wm_attributes("-topmost", 1)
 
     def logout(self) -> None:
-        os.system("shutdown -l")
+        # Check checklists before logging out
+        if self.check_checklists():
+            # If check_checklists returns True, it means it's okay to log out
+            os.system("shutdown -l")
 
     def reboot(self) -> None:
         os.system("shutdown -r")
@@ -224,6 +244,75 @@ class MenuButton(object):
             finally:  # enable always on top again
                 if os.name == 'nt':
                     root.wm_attributes("-topmost", 1)
+
+    def check_checklists(self) -> bool:
+        """
+        Checks if required checklists are completed.
+        If not, it shows a confirmation dialog.
+        Returns True if logout should proceed, False otherwise.
+        """
+        url: str = f"http://{WEB_SERVER}{BACKEND_URLS['check_for_closed_checklists'].format(client=CLIENT_NAME)}"
+        try:
+            with urllib.request.urlopen(url) as response:
+                if response.status == 200:
+                    response_data = response.read().decode('utf-8')
+                    json_data = json.loads(response_data)
+                    # If success is true, checklists are fine, proceed with logout.
+                    if not json_data.get("success", False):
+                        # If success is false, show dialog and return its result.
+                        return self.show_image_messagebox()
+                else:
+                    messagebox.showerror(  # type: ignore
+                        "Checkliste Fehler", f"Fehler bei der Prüfung der Checklisten: {response.status}")
+                    return False  # Don't logout on server error
+        except Exception as e:
+            messagebox.showerror(  # type: ignore
+                "Checkliste Fehler", f"Fehler bei der Verbindung zum Server: {e}")
+            return False  # Don't logout on connection error
+        return True  # Default to allowing logout if checks pass
+
+    def show_image_messagebox(self) -> bool:
+        dialog = Toplevel(root)
+        dialog.title("Achtung!")
+        result = False  # Default to Cancel
+
+        def on_ok() -> None:
+            nonlocal result
+            result = True
+            dialog.destroy()
+
+        def on_cancel() -> None:
+            dialog.destroy()
+
+        content_frame = Frame(dialog)
+        content_frame.pack(padx=20, pady=20)
+
+        try:
+            img_path: Path = SCRIPT_DIR / "vasnarr_is_watching_you.png"
+            pil_img: ImageFile = Image.open(img_path)
+            tk_img = ImageTk.PhotoImage(pil_img)
+            img_label = Label(content_frame, image=tk_img)
+            # img_label.image = tk_img  # Keep a reference!
+            img_label.pack(side="left", padx=(0, 15))
+        except Exception as e:
+            Label(content_frame, text=f"Bild konnte nicht geladen werden:\n{e}").pack(
+                side="left", padx=(0, 15))
+
+        message = "Es wurde keine abgeschlossene Checklist gefunden. Dennoch abmelden?"
+        Label(content_frame, text=message, justify="left").pack(side="left")
+
+        button_frame = Frame(dialog)
+        button_frame.pack(pady=10)
+        ok_button = Button(button_frame, text="OK", command=on_ok, width=10)
+        ok_button.pack(side="left", padx=10)
+        cancel_button = Button(
+            button_frame, text="Abbrechen", command=on_cancel, width=10)
+        cancel_button.pack(side="right", padx=10)
+
+        dialog.transient(root)
+        dialog.grab_set()
+        root.wait_window(dialog)
+        return result
 
     def dummyCmd(self) -> None:
         pass

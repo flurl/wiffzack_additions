@@ -599,11 +599,22 @@ def get_checklists() -> Response:
     return mk_response([asdict(c) for c in checklists])
 
 
+@app.route("/api/checklist/latest/by_category/<string:category>", methods=["GET"])
+def get_latest_checklist_by_category(category: str) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    checklists: list[checklist.Checklist] = checklist.get_latest_closed_checklists_by_category(
+        dbConn, category, config["checklist"]["expiry_mins"])
+    if len(checklists) == 0:
+        return jsonify({'success': False})
+    return mk_response([asdict(c) for c in checklists])
+
+
 @app.route("/api/checklist/latest/<int:master_id>", methods=["GET"])
-def get_latest_checklist(master_id: int) -> Response:
+@app.route("/api/checklist/latest/<int:master_id>/<int:closed>", methods=["GET"])
+def get_latest_checklist(master_id: int, closed: int = 0) -> Response:
     dbConn: DatabaseConnection = get_db().connection
     cl: checklist.Checklist | None = checklist.get_latest_checklist(
-        dbConn, master_id, config["checklist"]["expiry_mins"])
+        dbConn, master_id, config["checklist"]["expiry_mins"], closed)
     if cl is None:
         return jsonify({'success': False})
     return mk_response(asdict(cl))

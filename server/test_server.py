@@ -853,7 +853,7 @@ def test_api_get_latest_checklist(monkeypatch):
     mock_checklist = checklist.Checklist(
         id=1, datum=None, completed=False, master_name="Morning")
     monkeypatch.setattr(server.checklist, "get_latest_checklist",
-                        lambda db, master_id, expiry: mock_checklist)
+                        lambda db, master_id, expiry, closed: mock_checklist)
     with app.test_client() as client:
         resp = client.get("/api/checklist/latest/1")
         assert resp.status_code == 200
@@ -867,7 +867,7 @@ def test_api_get_latest_checklist(monkeypatch):
 def test_api_get_latest_checklist_none(monkeypatch):
     app = server.app
     monkeypatch.setattr(
-        server.checklist, "get_latest_checklist", lambda db, master_id, expiry: None)
+        server.checklist, "get_latest_checklist", lambda db, master_id, expiry, closed: None)
     with app.test_client() as client:
         resp = client.get("/api/checklist/latest/1")
         assert resp.status_code == 200
@@ -941,3 +941,36 @@ def mock_db_for_checklist_tests(monkeypatch):
     monkeypatch.setattr(server, "get_db", lambda: mock_db_instance)
 
 # endregion Checklist Tests
+
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_get_latest_by_category_succeeds_if_one_is_closed(monkeypatch):
+    """
+    Tests that the endpoint returns success: true if at least one checklist
+    for a category has been closed, and success: false if none are closed.
+    """
+    app = server.app
+
+    # 1. Simulate that NO checklists have been recently closed.
+    monkeypatch.setattr(
+        server.checklist, "get_latest_closed_checklists_by_category", lambda db, cat, exp: [])
+
+    with app.test_client() as client:
+        # The API should report failure because no checklists are closed.
+        resp = client.get("/api/checklist/latest/by_category/bar")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is False
+
+        # 2. Now, simulate that AT LEAST ONE checklist is closed.
+        mock_closed_checklists = [
+            checklist.Checklist(id=101, datum=None,
+                                completed=True, master_name="Morning")
+        ]
+        monkeypatch.setattr(
+            server.checklist, "get_latest_closed_checklists_by_category", lambda db, cat, exp: mock_closed_checklists)
+
+        resp2 = client.get("/api/checklist/latest/by_category/bar")
+        data2 = resp2.get_json()
+        assert data2["success"] is True
+        assert len(data2["data"]) == 1
