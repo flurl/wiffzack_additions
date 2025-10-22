@@ -620,6 +620,14 @@ def get_latest_checklist(master_id: int, closed: int = 0) -> Response:
     return mk_response(asdict(cl))
 
 
+@app.route("/api/checklist/history/<int:master_id>", methods=["GET"])
+def get_checklist_history(master_id: int) -> Response:
+    dbConn: DatabaseConnection = get_db().connection
+    checklists: list[checklist.Checklist] = checklist.get_checklist_history(
+        dbConn, master_id)
+    return mk_response([asdict(c) for c in checklists])
+
+
 @app.route("/api/checklist/close/<int:checklist_id>", methods=["GET"])
 def close_checklist(checklist_id: int) -> Response:
     dbConn: DatabaseConnection = get_db().connection

@@ -940,6 +940,29 @@ def mock_db_for_checklist_tests(monkeypatch):
     mock_db_instance.connection = MagicMock()
     monkeypatch.setattr(server, "get_db", lambda: mock_db_instance)
 
+
+@pytest.mark.usefixtures("mock_db_for_checklist_tests")
+def test_api_get_checklist_history(monkeypatch):
+    app = server.app
+    mock_history = [
+        checklist.Checklist(id=1, datum="2023-01-01T10:00:00",
+                            completed=True, master_name="Daily Morning"),
+        checklist.Checklist(id=2, datum="2023-01-02T10:00:00",
+                            completed=False, master_name="Daily Morning")
+    ]
+    monkeypatch.setattr(
+        server.checklist, "get_checklist_history", lambda db, master_id: mock_history)
+    with app.test_client() as client:
+        resp = client.get("/api/checklist/history/123")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert len(data["data"]) == 2
+        assert data["data"][0]["id"] == 1
+        assert data["data"][0]["master_name"] == "Daily Morning"
+        assert data["data"][1]["id"] == 2
+        assert data["data"][1]["completed"] is False
+
 # endregion Checklist Tests
 
 

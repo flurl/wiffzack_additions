@@ -268,6 +268,15 @@ def get_checklists_for_master(db: "DatabaseConnection", master_name: int) -> lis
     return [Checklist(id=row[0], datum=row[1], completed=row[2], master_name=row[3]) for row in results]
 
 
+def get_checklist_history(db: "DatabaseConnection", master_id: int) -> list[Checklist]:
+    """Retrieves all checklist instances for a given master, ordered by date descending."""
+    query = """select chk_id, chk_datum, chk_completed, chk_master_name from checklists where chk_master_name = (select chm_name from checklist_master where chm_id = %s) order by chk_datum desc"""
+    results: DBResult = db.execute_query(query, (master_id,))
+    if not results:
+        return []
+    return [Checklist(id=row[0], datum=row[1], completed=row[2], master_name=row[3]) for row in results]
+
+
 def update_checklist(db: "DatabaseConnection", checklist: Checklist) -> None:
     """Updates a checklist instance."""
     query = "UPDATE checklists SET chk_datum = %s, chk_completed = %d, chk_master_name = %d WHERE chk_id = %d"

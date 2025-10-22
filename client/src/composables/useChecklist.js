@@ -16,6 +16,9 @@ export function useChecklist(options = {}) {
     const checklistMasterQuestions = ref([]);
     const currentChecklistId = ref(null);
     const checklistAnswers = ref([]);
+    // from useChecklistReview
+    const checklistHistory = ref([]);
+    //const selectedChecklist = ref(null);
 
     const executeRequest = async (requestFunc) => {
         isLoading.value = true;
@@ -135,11 +138,22 @@ export function useChecklist(options = {}) {
     };
 
     const fetchChecklistAnswers = async () => {
-        if (!currentChecklistId.value) return;
+        //const checklistId = mode.value === 'review' ? selectedChecklist.value?.id : currentChecklistId.value;
+        const checklistId = currentChecklistId.value;
+        if (!checklistId) {
+            checklistAnswers.value = [];
+            return;
+        }
         await executeRequest(async () => {
-            const response = await axios.get(`${config.backendHost}/api/checklist/answers/${currentChecklistId.value}`);
+            const response = await axios.get(`${config.backendHost}/api/checklist/answers/${checklistId}`);
             checklistAnswers.value = response.data?.data && Array.isArray(response.data.data) ? response.data.data : [];
         });
+    };
+
+    const fetchChecklistHistory = async () => {
+        if (!currentChecklistMaster.value?.id) return;
+        const response = await axios.get(`${config.backendHost}/api/checklist/history/${currentChecklistMaster.value.id}`);
+        checklistHistory.value = response.data?.data && Array.isArray(response.data.data) ? response.data.data : [];
     };
 
     const updateChecklistAnswer = async (answer, choice) => {
@@ -163,7 +177,13 @@ export function useChecklist(options = {}) {
             } else {
                 checklistMasterQuestions.value = [];
             }
-        } else {
+        } else if (mode.value === 'review') {
+            if (newMaster?.id) {
+                fetchChecklistHistory();
+            } else {
+                checklistHistory.value = [];
+            }
+        } else { // 'complete' mode
             if (newMaster?.id) {
                 fetchLatestChecklist();
             } else {
@@ -180,6 +200,15 @@ export function useChecklist(options = {}) {
         }
     });
 
+    /*watch(selectedChecklist, (newChecklist) => {
+        if (mode.value !== 'review') return;
+        if (newChecklist?.id) {
+            fetchChecklistAnswers();
+        } else {
+            checklistAnswers.value = [];
+        }
+    });*/
+
     return {
         // State
         checklistMasters,
@@ -188,6 +217,8 @@ export function useChecklist(options = {}) {
         checklistMasterQuestions,
         checklistAnswers,
         currentChecklistId,
+        checklistHistory,
+        //selectedChecklist,
 
         // Methods
         fetchChecklistMasters,
