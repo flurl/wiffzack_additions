@@ -93,6 +93,14 @@ const amount = computed(() => {
 
 
 const swapStorage = () => {
+    if (sourceStorageId.value === null || destinationStorageId.value === null) {
+        showModal({
+            title: t('message.storage_swap_not_possible'),
+            buttons: { ok: true, cancel: false },
+            type: 'info'
+        })
+        return;
+    }
     const tmp = sourceStorageId.value;
     sourceStorageId.value = destinationStorageId.value;
     destinationStorageId.value = tmp;

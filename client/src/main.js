@@ -58,7 +58,8 @@ const i18n = createI18n({
         done: "Done",
         skip: "Skip",
         close_checklist: "Close checklist",
-        save: "Save"
+        save: "Save",
+        storage_swap_not_possible: "Storage swap not possible"
       }
     },
     de: {
@@ -107,7 +108,8 @@ const i18n = createI18n({
         done: "Erledigt",
         skip: "Überspringen",
         close_checklist: "Checkliste schließen",
-        save: "Speichern"
+        save: "Speichern",
+        storage_swap_not_possible: "Umschalten der Lager nicht möglich"
       }
     }
   }
