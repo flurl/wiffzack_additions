@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, getCurrentInstance, computed } from 'vue'
+import { ref, watch, getCurrentInstance, computed, onMounted, onUpdated } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ArticleList from './ArticleList.vue'
 import ModalDialog from './ModalDialog.vue'
@@ -8,6 +8,7 @@ import QuitButton from './QuitButton.vue'
 import { useStorageData } from '../composables/useStorageData';
 import { useColor } from '../utils/useColor';
 const { stringToColor, colorIsDarkSimple } = useColor();
+import dragscroll from 'dragscroll';
 
 
 const { t } = useI18n()
@@ -469,6 +470,16 @@ const exit = (success) => {
         type: success ? 'success' : 'error'
     });
 }
+
+onMounted(() => {
+    document.querySelectorAll('.article-list-container')[0].classList.add('dragscroll');
+    dragscroll.reset();
+});
+
+onUpdated(() => {
+    dragscroll.reset();
+});
+
 
 </script>
 
