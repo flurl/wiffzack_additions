@@ -1,6 +1,4 @@
 <script setup>
-//import { ref } from 'vue';
-
 const props = defineProps({
     checked: {
         type: Boolean,
@@ -17,14 +15,24 @@ const toggled = () => {
 </script>
 
 <template>
-    <label class="switch">
-        <input type="checkbox" :checked="props.checked" @change="toggled">
-        <span class="slider round"></span>
-    </label>
+    <div class="toggle-switch">
+        <label class="switch">
+            <input type="checkbox" :checked="props.checked" @change="toggled">
+            <span class="slider round"></span>
+        </label>
+        <label v-if="$slots.default">
+            <slot />
+        </label>
+    </div>
 </template>
 
 
 <style lang="scss" scoped>
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 
 .switch {
     position: relative;
@@ -85,5 +93,4 @@ input:checked+.slider:before {
 .slider.round:before {
     border-radius: 50%;
 }
-
 </style>
