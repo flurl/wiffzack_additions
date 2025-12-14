@@ -59,7 +59,12 @@ const i18n = createI18n({
         skip: "Skip",
         close_checklist: "Close checklist",
         save: "Save",
-        storage_swap_not_possible: "Storage swap not possible"
+        storage_swap_not_possible: "Storage swap not possible",
+        remove_article_title: "Remove Article",
+        remove_article_body: "Do you want to remove '{articleName}' completely from the storage?",
+        yes: "Yes",
+        no: "No",
+        updating: "Updating..."
       }
     },
     de: {
@@ -109,7 +114,12 @@ const i18n = createI18n({
         skip: "Überspringen",
         close_checklist: "Checkliste schließen",
         save: "Speichern",
-        storage_swap_not_possible: "Umschalten der Lager nicht möglich"
+        storage_swap_not_possible: "Umschalten der Lager nicht möglich",
+        remove_article_title: "Artikel löschen",
+        remove_article_body: "Den Artikel '{articleName}' komplett aus dem Lager löschen?",
+        yes: "Ja",
+        no: "Nein",
+        updating: "Aktualisierung..."
       }
     }
   }

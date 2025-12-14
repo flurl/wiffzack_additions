@@ -20,7 +20,7 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['cancel', 'ok']);
+const emit = defineEmits(['cancel', 'ok', 'yes', 'no']);
 
 const modal = ref(null);
 
@@ -54,6 +54,12 @@ const modalOK = () => {
     //modal.value.classList.remove('is-active');
     emit('ok');
 };
+const modalYes = () => {
+    emit('yes');
+};
+const modalNo = () => {
+    emit('no');
+};
 </script>
 
 <template>
@@ -65,6 +71,18 @@ const modalOK = () => {
             <section>
                 <slot></slot>
             </section>
+            <button class="cancel" v-if="buttons.no" @click="modalNo">
+                <span class="icon">
+                    <font-awesome-icon :icon="['fas', 'xmark']" />
+                </span>
+                <span>{{ $t('message.no') }}</span>
+            </button>
+            <button class="confirm" v-if="buttons.yes" @click="modalYes">
+                <span class="icon">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                </span>
+                <span>{{ $t('message.yes') }}</span>
+            </button>
             <button class="cancel" v-if="buttons.cancel" @click="modalCancel">
                 <span class="icon">
                     <font-awesome-icon :icon="['fas', 'xmark']" />

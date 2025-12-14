@@ -62,6 +62,7 @@ const {
     getArticlesInSourceStorage,
     getArticlesInTransferStorage,
     putIntoStorage,
+    setArticleAmountInStorage,
     setInitInventory,
     emptyTransferStorage,
     loading,
@@ -145,8 +146,50 @@ const addArticleToSelected = (article) => {
     article.amount -= a;
 };
 const removeArticleFromSelected = (article) => {
-    articles.value[article.id].amount += selectedArticles.value[article.id].amount;
-    selectedArticles.value[article.id].amount = 0;
+    // The article object passed here is from the destDisplayArticles list.
+    // It might be from selectedArticles or destStorageArticles.
+    const articleId = article.id;
+    const selectedAmount = selectedArticles.value[articleId]?.amount || 0;
+
+    const justRemoveSelection = () => {
+        if (articles.value[articleId]) {
+            articles.value[articleId].amount += selectedAmount;
+        }
+        if (selectedArticles.value[articleId]) {
+            delete selectedArticles.value[articleId];
+        }
+    };
+
+    // If the article is in destStorageArticles (meaning it's already in the destination storage),
+    // we need to ask the user if they want to remove it from the actual storage or just from the current selection.
+    if (props.mode === 'request' && showDestInventory.value) {
+        showModal({
+            title: t('message.remove_article_title'),
+            body: t('message.remove_article_body', { articleName: article.name }),
+            type: 'question',
+            buttons: { ok: false, cancel: false, yes: true, no: true },
+            noCallback: justRemoveSelection,
+            yesCallback: removeAllFromDestination,
+        });
+
+        async function removeAllFromDestination() {
+            showModal({ title: t('message.updating'), buttons: {} });
+            const success = await setArticleAmountInStorage(destinationStorageId.value, article, 0);
+            if (success) {
+                // Update local state
+                if (destStorageArticles.value[articleId]) {
+                    destStorageArticles.value[articleId].amount = 0;
+                }
+                justRemoveSelection(); // Also remove it from the current selection
+                modalConf.value.show = false; // Close the "updating" modal
+            } else {
+                showModal({ title: t('message.error'), body: error.value, type: 'error', buttons: { ok: true } });
+            }
+        }
+
+    } else {
+        justRemoveSelection();
+    }
 };
 
 
@@ -159,6 +202,8 @@ const modalConf = ref({
     show: false,
     OKCallback: null,
     cancelCallback: null,
+    yesCallback: null,
+    noCallback: null,
     body: "",
     rawHTML: false,
     type: "info",
@@ -233,6 +278,28 @@ const showModal = (config = {}) => {
         };
     } else {
         modalConf.value.cancelCallback = null;
+    }
+
+    if (mergedConfig.buttons.yes) {
+        modalConf.value.yesCallback = () => {
+            modalConf.value.show = false;
+            if (mergedConfig.yesCallback) {
+                mergedConfig.yesCallback();
+            }
+        };
+    } else {
+        modalConf.value.yesCallback = null;
+    }
+
+    if (mergedConfig.buttons.no) {
+        modalConf.value.noCallback = () => {
+            modalConf.value.show = false;
+            if (mergedConfig.noCallback) {
+                mergedConfig.noCallback();
+            }
+        };
+    } else {
+        modalConf.value.noCallback = null;
     }
 
     modalConf.value.type = mergedConfig.type;
@@ -367,7 +434,7 @@ const onOKClicked = () => {
 }
 
 
-const showDestInventory = ref(false);
+const showDestInventory = ref(props.mode === 'request');
 const onShowDestInventorySwitchToggled = () => {
     showDestInventory.value = !showDestInventory.value;;
 }
@@ -401,7 +468,8 @@ const exit = (success) => {
 <template>
     <div class="wrapper">
         <ModalDialog :title="modalConf.title" :show="modalConf.show" :buttons="modalConf.buttons" :type="modalConf.type"
-            @ok="modalConf.OKCallback" @cancel="modalConf.cancelCallback">
+            @ok="modalConf.OKCallback" @cancel="modalConf.cancelCallback" @yes="modalConf.yesCallback"
+            @no="modalConf.noCallback">
             <p v-if="modalConf.rawHTML === false">{{ modalConf.body }}</p>
             <span v-else v-html="modalConf.body"></span>
         </ModalDialog>

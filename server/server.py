@@ -242,6 +242,36 @@ def update_storage(to_storage_id: int | None = None, from_storage_id: int | None
     return jsonify({'success': True})
 
 
+@app.route("/api/set_article_amount_in_storage/<int:storage_id>", methods=["POST"])
+def set_article_amount_in_storage(storage_id: int) -> Response:
+    """
+    Sets the amount of a specific article in a storage to an absolute value.
+    """
+    db: Database = get_db()
+    article_data: Any | None = request.json
+    if not article_data or "id" not in article_data or "name" not in article_data or "amount" not in article_data:
+        return jsonify({'success': False, 'message': 'Invalid article data provided.'})
+
+    try:
+        result: DBResult = db.get_storage_name(storage_id)
+        assert result is not None
+        storage_name: str = result[0][0]
+    except (AssertionError, IndexError):
+        return jsonify({'success': False, 'message': f'Invalid storage ID {storage_id}'})
+
+    try:
+        sm = StorageModifier(article=Article(id=article_data["id"], name=article_data["name"]),
+                             storage_id=storage_id, amount=article_data["amount"])
+        db.update_storage(sm, absolute=True)
+        storage_transfer_logger.info(
+            f"SetAbsolute|{sm.amount}|{sm.article.id}-{sm.article.name}|{storage_id}-{storage_name}")
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(
+            f"Error setting article amount for {article_data['id']} in storage {storage_id}: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': str(e)})
+
+
 @app.route("/api/empty_storage/<int:storage_id>", methods=["GET"])
 def empty_storage(storage_id: int) -> Response:
     get_db().empty_storage(storage_id)

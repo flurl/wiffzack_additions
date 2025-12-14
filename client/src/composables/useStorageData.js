@@ -144,6 +144,30 @@ export function useStorageData(sourceStorageId, destinationStorageId, transferSt
         }
     }
 
+    const setArticleAmountInStorage = async (storageId, article, amount) => {
+        loading.value = true;
+        error.value = null;
+        const url = `${config.backendHost}/api/set_article_amount_in_storage/${storageId}`;
+        const data = { ...article, amount: amount };
+
+        try {
+            const response = await axios.post(url, data);
+            if (response.data.success) {
+                console.log("Article amount update succeeded");
+                return true;
+            } else {
+                console.log("Article amount update did not succeed");
+                error.value = response.data.message || "Unknown error";
+                return false;
+            }
+        } catch (err) {
+            error.value = err;
+            return false;
+        } finally {
+            loading.value = false;
+        }
+    };
+
     const setInitInventory = async () => {
         loading.value = true;
         error.value = null;
@@ -231,6 +255,7 @@ export function useStorageData(sourceStorageId, destinationStorageId, transferSt
         getArticlesInSourceStorage,
         getArticlesInTransferStorage,
         putIntoStorage,
+        setArticleAmountInStorage,
         setInitInventory,
         emptyTransferStorage,
         loading,
