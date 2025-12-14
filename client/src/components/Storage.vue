@@ -641,7 +641,7 @@ button.confirm {
 
 
 .right-col:deep() .article-list-container {
-    height: calc(100% - 6rem);
+    height: calc(100% - 5em);
     width: 100%;
     overflow: scroll;
     font-weight: bold;
