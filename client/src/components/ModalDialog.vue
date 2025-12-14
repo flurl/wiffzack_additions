@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 
 const props = defineProps({
     show: {
@@ -11,8 +11,8 @@ const props = defineProps({
         default: 'Modal Title',
     },
     buttons: {
-        type: Object,
-        default: () => ({ ok: true, cancel: true })
+        type: [Object, Array],
+        default: () => ({ ok: true, cancel: true }),
     },
     type: {
         type: String,
@@ -31,6 +31,40 @@ const hideModal = () => {
     modal.value.close();
 };
 
+const normalizedButtons = computed(() => {
+    if (Array.isArray(props.buttons)) {
+        return props.buttons;
+    }
+
+    const buttonList = [];
+    if (props.buttons.no) {
+        buttonList.push({ text: 'message.no', event: 'no', class: 'cancel', icon: ['fas', 'xmark'] });
+    }
+    if (props.buttons.yes) {
+        buttonList.push({ text: 'message.yes', event: 'yes', class: 'confirm', icon: ['fas', 'check'] });
+    }
+    if (props.buttons.cancel) {
+        buttonList.push({ text: 'message.cancel', event: 'cancel', class: 'cancel', icon: ['fas', 'xmark'] });
+    }
+    if (props.buttons.ok) {
+        buttonList.push({ text: 'message.OK', event: 'ok', class: 'confirm', icon: ['fas', 'check'] });
+    }
+    return buttonList;
+});
+
+const handleButtonClick = (eventToEmit) => {
+    if (eventToEmit) {
+        emit(eventToEmit);
+    }
+};
+
+const onDialogCancel = (event) => {
+    // This event is fired when the user presses the ESC key.
+    // We emit a 'cancel' event to allow the parent to handle it,
+    // for example, by setting the `show` prop to false.
+    emit('cancel');
+}
+
 
 const showOrHideModal = () => {
     if (props.show) {
@@ -45,25 +79,10 @@ watch(() => props.show, showOrHideModal);
 onMounted(() => {
     showOrHideModal();
 });
-
-const modalCancel = () => {
-    //modal.value.classList.remove('is-active');
-    emit('cancel');
-};
-const modalOK = () => {
-    //modal.value.classList.remove('is-active');
-    emit('ok');
-};
-const modalYes = () => {
-    emit('yes');
-};
-const modalNo = () => {
-    emit('no');
-};
 </script>
 
 <template>
-    <dialog ref="modal" :class="props.type">
+    <dialog ref="modal" :class="props.type" @cancel="onDialogCancel">
         <div class="modal-content">
             <header>
                 <h2 class="modal-title">{{ title }}</h2>
@@ -71,30 +90,15 @@ const modalNo = () => {
             <section>
                 <slot></slot>
             </section>
-            <button class="cancel" v-if="buttons.no" @click="modalNo">
-                <span class="icon">
-                    <font-awesome-icon :icon="['fas', 'xmark']" />
-                </span>
-                <span>{{ $t('message.no') }}</span>
-            </button>
-            <button class="confirm" v-if="buttons.yes" @click="modalYes">
-                <span class="icon">
-                    <font-awesome-icon :icon="['fas', 'check']" />
-                </span>
-                <span>{{ $t('message.yes') }}</span>
-            </button>
-            <button class="cancel" v-if="buttons.cancel" @click="modalCancel">
-                <span class="icon">
-                    <font-awesome-icon :icon="['fas', 'xmark']" />
-                </span>
-                <span>{{ $t('message.cancel') }}</span>
-            </button>
-            <button class="confirm" v-if="buttons.ok" @click="modalOK">
-                <span class="icon">
-                    <font-awesome-icon :icon="['fas', 'check']" />
-                </span>
-                <span>{{ $t('message.OK') }}</span>
-            </button>
+            <div class="modal-buttons">
+                <button v-for="(button, index) in normalizedButtons" :key="index" :class="button.class"
+                    @click="handleButtonClick(button.event)">
+                    <span class="icon" v-if="button.icon">
+                        <font-awesome-icon :icon="button.icon" />
+                    </span>
+                    <span>{{ $t(button.text) }}</span>
+                </button>
+            </div>
         </div>
     </dialog>
 </template>
@@ -153,6 +157,21 @@ dialog {
     &.question .modal-title::before {
         content: '❓'; // Unicode question mark
         color: $light-question;
+    }
+
+    .modal-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding-top: 1rem;
+    }
+
+    .modal-content {
+        position: relative;
+
+        header {
+            padding-right: 2rem; // Space for the close button
+        }
     }
 }
 </style>
