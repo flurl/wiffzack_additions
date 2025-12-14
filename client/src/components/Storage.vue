@@ -23,6 +23,8 @@ const props = defineProps({
     mode: String
 });
 
+const SABSMode = ref(false);
+
 
 const sourceStorageId = ref(null);
 const destinationStorageId = ref(null);
@@ -521,13 +523,20 @@ const exit = (success) => {
                 </template>
             </div>
 
-            <div class="right-col">
+            <div class="right-col" :class="{ 'SABS-mode': SABSMode }">
                 <ArticleList :articles="destDisplayArticles" :article-updates="selectedArticles"
                     :enable-removal-from-storage="mode === 'request'" @article-removed="removeArticleFromSelected">
                 </ArticleList>
-                <div class="dest-storage-switch">
-                    <ToggleSwitch :checked="showDestInventory" @toggled="onShowDestInventorySwitchToggled">
-                    </ToggleSwitch>
+                <div class="switch-wrapper">
+                    <div class="dest-storage-switch">
+                        <ToggleSwitch :checked="showDestInventory" @toggled="onShowDestInventorySwitchToggled">
+                        </ToggleSwitch>
+                    </div>
+                    <div class="SABS-mode-switch">
+                        <ToggleSwitch :checked="SABSMode" @toggled="SABSMode = !SABSMode">
+                            SABS
+                        </ToggleSwitch>
+                    </div>
                 </div>
             </div>
 
@@ -636,7 +645,14 @@ button.confirm {
     }
 }
 
-.dest-storage-switch {
+.switch-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 0.5rem;
+}
+
+.SABS-mode {
+    font-size: 200%;
 }
 </style>
