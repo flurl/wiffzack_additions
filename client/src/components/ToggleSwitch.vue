@@ -4,6 +4,14 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    labelPosition: {
+        type: String,
+        default: 'right',
+        validator: (value) => {
+            // The value must match one of these strings
+            return ['top', 'right', 'bottom', 'left'].includes(value)
+        }
+    },
 });
 
 const emit = defineEmits(['toggled']);
@@ -15,23 +23,30 @@ const toggled = () => {
 </script>
 
 <template>
-    <div class="toggle-switch">
+    <div class="toggle-switch" :class="[`label-on-${props.labelPosition}`]">
+        <label v-if="$slots.default && (props.labelPosition === 'left' || props.labelPosition === 'top')">
+            <slot />
+        </label>
         <label class="switch">
             <input type="checkbox" :checked="props.checked" @change="toggled">
             <span class="slider round"></span>
         </label>
-        <label v-if="$slots.default">
+        <label v-if="$slots.default && (props.labelPosition === 'right' || props.labelPosition === 'bottom')">
             <slot />
         </label>
     </div>
 </template>
-
 
 <style lang="scss" scoped>
 .toggle-switch {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+
+    &.label-on-top,
+    &.label-on-bottom {
+        flex-direction: column;
+    }
 }
 
 .switch {

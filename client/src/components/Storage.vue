@@ -540,11 +540,13 @@ onUpdated(() => {
                 </ArticleList>
                 <div class="switch-wrapper">
                     <div class="dest-storage-switch">
-                        <ToggleSwitch :checked="showDestInventory" @toggled="onShowDestInventorySwitchToggled">
+                        <ToggleSwitch :checked="showDestInventory" label-position="bottom"
+                            @toggled="onShowDestInventorySwitchToggled">
+                            {{ t('message.show_dest_inventory_abbreviation') }}
                         </ToggleSwitch>
                     </div>
                     <div class="SABS-mode-switch">
-                        <ToggleSwitch :checked="SABSMode" @toggled="SABSMode = !SABSMode">
+                        <ToggleSwitch :checked="SABSMode" label-position="bottom" @toggled="SABSMode = !SABSMode">
                             SABS
                         </ToggleSwitch>
                     </div>
@@ -639,7 +641,7 @@ button.confirm {
 
 
 .right-col:deep() .article-list-container {
-    height: calc(100% - 4rem);
+    height: calc(100% - 6rem);
     width: 100%;
     overflow: scroll;
     font-weight: bold;
