@@ -113,19 +113,24 @@ const swapStorage = () => {
 
 
 const destDisplayArticles = computed(() => {
-    if (!showDestInventory.value) {
-        return selectedArticles.value;
-    }
 
     const displayArticles = JSON.parse(JSON.stringify(destStorageArticles.value)); // Start with a copy of the first object
+
+    // If showDestInventory is false, only show articles that are in selectedArticles
+    if (!showDestInventory.value) {
+        for (const id in displayArticles) {
+            if (!selectedArticles.value[id]) {
+                // remove the entry for id from displayArticles
+                delete displayArticles[id];
+            }
+        }
+    }
+
     // Iterate over the keys in the second object
     for (const id in selectedArticles.value) {
-        if (displayArticles[id]) {
-            // If the ID exists in both objects, sum the amounts
-            displayArticles[id].amount += selectedArticles.value[id].amount;
-        } else {
+        if (!displayArticles[id]) {
             // If the ID is unique to the second object, add it to the result
-            displayArticles[id] = { ...selectedArticles.value[id] };
+            displayArticles[id] = { ...selectedArticles.value[id], amount: 0 };
         }
     }
     return displayArticles;
@@ -162,7 +167,7 @@ const removeArticleFromSelected = (article) => {
 
     // If the article is in destStorageArticles (meaning it's already in the destination storage),
     // we need to ask the user if they want to remove it from the actual storage or just from the current selection.
-    if (props.mode === 'request' && showDestInventory.value) {
+    if (props.mode === 'request' && showDestInventory.value && !selectedArticles.value[articleId]) {
         showModal({
             title: t('message.remove_article_title'),
             body: t('message.remove_article_body', { articleName: article.name }),
@@ -517,7 +522,9 @@ const exit = (success) => {
             </div>
 
             <div class="right-col">
-                <ArticleList :articles="destDisplayArticles" @article-removed="removeArticleFromSelected"></ArticleList>
+                <ArticleList :articles="destDisplayArticles" :article-updates="selectedArticles"
+                    :enable-removal-from-storage="mode === 'request'" @article-removed="removeArticleFromSelected">
+                </ArticleList>
                 <div class="dest-storage-switch">
                     <ToggleSwitch :checked="showDestInventory" @toggled="onShowDestInventorySwitchToggled">
                     </ToggleSwitch>

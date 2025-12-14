@@ -235,3 +235,15 @@ span.slider.round::before {
   border: 1px dashed black;
   position: relative;
 }
+
+.relative-small-text {
+  font-size: 75%;
+}
+
+.relative-medium-text {
+  font-size: 100%;
+}
+
+.relative-large-text {
+  font-size: 125%;
+}
