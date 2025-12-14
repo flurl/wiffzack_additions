@@ -495,6 +495,58 @@ def test_api_update_storage(monkeypatch):
         assert resp5.status_code == 415
 
 
+def test_api_set_article_amount_in_storage(monkeypatch):
+    app = server.app
+    mock_db_instance = MagicMock()
+    monkeypatch.setattr(server, "get_db", lambda: mock_db_instance)
+
+    article_data = {"id": 1, "name": "Test Article", "amount": 100}
+
+    with app.test_client() as client:
+        # --- Test Success Case ---
+        mock_db_instance.get_storage_name.return_value = [("TestStorage",)]
+        mock_db_instance.update_storage.return_value = None  # Simulate success
+
+        resp = client.post(
+            "/api/set_article_amount_in_storage/42", json=article_data)
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+
+        # Verify update_storage was called correctly
+        mock_db_instance.update_storage.assert_called_once()
+        # call_args is a tuple of (positional_args, keyword_args)
+        pos_args, kwargs = mock_db_instance.update_storage.call_args
+        sm_arg = pos_args[0]
+        assert sm_arg.storage_id == 42
+        assert sm_arg.article.id == 1
+        assert sm_arg.amount == 100
+        assert kwargs['absolute'] is True
+
+        # --- Test Invalid Storage ID ---
+        mock_db_instance.reset_mock()
+        mock_db_instance.get_storage_name.return_value = None  # Simulate not found
+
+        resp_fail_storage = client.post(
+            "/api/set_article_amount_in_storage/99", json=article_data)
+
+        assert resp_fail_storage.status_code == 200
+        data_fail_storage = resp_fail_storage.get_json()
+        assert data_fail_storage["success"] is False
+        assert "Invalid storage ID" in data_fail_storage["message"]
+        mock_db_instance.update_storage.assert_not_called()
+
+        # --- Test Invalid JSON payload ---
+        resp_fail_json = client.post(
+            "/api/set_article_amount_in_storage/42", json={"id": 1})
+
+        assert resp_fail_json.status_code == 200
+        data_fail_json = resp_fail_json.get_json()
+        assert data_fail_json["success"] is False
+        assert "Invalid article data" in data_fail_json["message"]
+
+
 def test_api_get_article_by_group(monkeypatch):
     app = server.app
 
