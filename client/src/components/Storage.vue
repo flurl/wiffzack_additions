@@ -626,17 +626,19 @@ button.article-group {
 
 input.article-amount {
     max-width: 2em;
-    font-size: 2em;
+    font-size: 1.8em;
     padding: 0.2em 15px;
 }
 
 button.article-amount {
     width: 3em;
     padding: 0.4em 0;
-    font-size: 1.5em;
+    font-size: 1.4em;
 }
 
 button.confirm {
+    padding-top: 0.7em;
+    padding-bottom: 0.7em;
     margin-left: auto;
 }
 
