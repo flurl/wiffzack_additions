@@ -627,12 +627,12 @@ button.article-group {
 input.article-amount {
     max-width: 2em;
     font-size: 2em;
-    padding: 10px 15px;
+    padding: 0.2em 15px;
 }
 
 button.article-amount {
     width: 3em;
-    padding: 0.5em 0;
+    padding: 0.4em 0;
     font-size: 1.5em;
 }
 
