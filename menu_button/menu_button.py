@@ -56,7 +56,7 @@ FRONTEND_URLS: dict[str, str] = {
     "wardrobe_sales": "/data_table/wardrobe_sales",
     "messages": "/message/list",
     "invoices_dlg": "/invoices?terminal={client}",
-    "receipes": "/data_table/recipe/list?groupByColumn=0",
+    "recipes": "/data_table/recipe/list?groupByColumn=0",
     "request_restart": "/api/restart",
     "alarm": "/alarm?terminal={client}",
     "jotd": "/jotd",
@@ -118,7 +118,7 @@ class MenuButton(object):
                               command=self.show_messages, font=("Helvetica", 18, "bold"))
 
         self.menu.add_command(label="Rezepturen", underline=0,
-                              command=self.show_receipes, font=("Helvetica", 18, "bold"))
+                              command=self.show_recipes, font=("Helvetica", 18, "bold"))
 
         systemMenu: Menu = Menu(self.menu, tearoff=0)
         systemMenu.add_command(label='Logout', underline=0,
@@ -190,9 +190,9 @@ class MenuButton(object):
         self.open_browser(
             f"http://{WEB_SERVER}{FRONTEND_URLS['messages']}")
 
-    def show_receipes(self) -> None:
+    def show_recipes(self) -> None:
         self.open_browser(
-            f"http://{WEB_SERVER}{FRONTEND_URLS['receipes']}")
+            f"http://{WEB_SERVER}{FRONTEND_URLS['recipes']}")
 
     def open_browser(self, url: str) -> None:
         self.original_geometry = root.geometry()
@@ -212,7 +212,7 @@ class MenuButton(object):
     def kill_browser(self, event: Any) -> None:
         if self.browser_process and self.browser_process.poll() is None:
             if os.name == 'nt':
-                subprocess.call(['taskkill', '/F', '/T', '/PID',
+                subprocess.run(['taskkill', '/F', '/T', '/PID',
                                 str(self.browser_process.pid)])
             else:
                 os.killpg(os.getpgid(self.browser_process.pid), signal.SIGKILL)
@@ -232,10 +232,10 @@ class MenuButton(object):
         # Check checklists before logging out
         if self.check_checklists():
             # If check_checklists returns True, it means it's okay to log out
-            os.system("shutdown -l")
+            subprocess.run(["shutdown", "-l"])
 
     def reboot(self) -> None:
-        os.system("shutdown -r")
+        subprocess.run(["shutdown", "-r"])
 
     def open_alarm_dlg(self) -> None:
         self.open_browser(
