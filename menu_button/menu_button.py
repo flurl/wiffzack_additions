@@ -5,6 +5,7 @@ import subprocess
 import tomllib
 import os
 import random
+import signal
 from typing import LiteralString, Any
 from pathlib import Path
 import urllib.request
@@ -194,13 +195,38 @@ class MenuButton(object):
             f"http://{WEB_SERVER}{FRONTEND_URLS['receipes']}")
 
     def open_browser(self, url: str) -> None:
-        # allow newly opened window to become the top window
-        if os.name == 'nt':
-            root.wm_attributes("-topmost", 0)
-        subprocess.run(f"{KIOSK_BROWSER_CMD} \"{url}\"", shell=True)
-        # enable always on top again
-        if os.name == 'nt':
-            root.wm_attributes("-topmost", 1)
+        self.original_geometry = root.geometry()
+        root.geometry("+0+0")
+        self.menuBtn.configure(text="Kill")
+        self.menuBtn['menu'] = ''
+        self.menuBtn.bind('<Button-1>', self.kill_browser)
+
+        kwargs = {}
+        if os.name != 'nt':
+            kwargs['start_new_session'] = True
+
+        self.browser_process = subprocess.Popen(
+            f"{KIOSK_BROWSER_CMD} \"{url}\"", shell=True, **kwargs)  # type: ignore
+        self.monitor_browser()
+
+    def kill_browser(self, event: Any) -> None:
+        if self.browser_process and self.browser_process.poll() is None:
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID',
+                                str(self.browser_process.pid)])
+            else:
+                os.killpg(os.getpgid(self.browser_process.pid), signal.SIGKILL)
+
+    def monitor_browser(self) -> None:
+        if self.browser_process and self.browser_process.poll() is None:
+            root.after(100, self.monitor_browser)
+        else:
+            if hasattr(self, 'original_geometry'):
+                root.geometry(self.original_geometry)
+            self.menuBtn.configure(text="Menü")
+            self.menuBtn['menu'] = self.menu
+            self.menuBtn.unbind('<Button-1>')
+            self.browser_process = None
 
     def logout(self) -> None:
         # Check checklists before logging out
