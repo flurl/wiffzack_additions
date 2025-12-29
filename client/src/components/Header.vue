@@ -49,6 +49,7 @@ header {
 
     h1 {
         align-self: flex-end;
+        font-size: 140%;
     }
 
 }
