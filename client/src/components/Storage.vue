@@ -575,7 +575,8 @@ onUpdated(() => {
     }
 
     h1 {
-        font-size: 140%
+        font-size: 140%;
+        align-self: flex-end;
     }
 }
 

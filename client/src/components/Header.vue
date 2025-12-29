@@ -46,6 +46,11 @@ header {
     left: 0;
     right: 0;
     background-color: $light-background;
+
+    h1 {
+        align-self: flex-end;
+    }
+
 }
 
 .spinner-container {
