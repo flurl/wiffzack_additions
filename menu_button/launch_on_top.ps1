@@ -65,8 +65,11 @@ if ($process -eq $null) {
 
 # Check if a main window handle was found for the process
 if ($process.MainWindowHandle -ne 0) {
-  Write-Host "Setting window to topmost for process '$processName' (Handle: $($process.MainWindowHandle))."
-  Set-TopMost $process.MainWindowHandle
+  # Write-Host "Setting window to topmost for process '$processName' (Handle: $($process.MainWindowHandle))."
+  # Set-TopMost $process.MainWindowHandle
+
+  Write-Host "Waiting for process '$processName' to exit..."
+  $process.WaitForExit()
 } else {
   Write-Host "Could not find a main window handle for process '$processName'. It might be a background process or not yet fully initialized."
 }
