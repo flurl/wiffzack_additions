@@ -474,8 +474,9 @@ def get_invoices_without_daily_closing() -> Response:
 
 
 @app.route("/api/invoice/without_daily_closing_count", methods=["GET"])
-def get_invoices_with_daily_closing_count() -> Response:
-    count: int = len(get_db().get_invoices_without_daily_closing())
+def get_invoices_without_daily_closing_count() -> Response:
+    result: DBResult = get_db().get_invoices_without_daily_closing()
+    count: int = len(result or [])
     return jsonify({'success': True, "data": {"count": count}})
 
 

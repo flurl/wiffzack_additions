@@ -296,6 +296,66 @@ def test_api_get_invoice_list(monkeypatch):
         # TODO: Test filtered by invoice type. Therefore the it's necessary that the query returns the invoice_type too
 
 
+def test_api_get_invoices_without_daily_closing(monkeypatch):
+    app = server.app
+    mock_invoices = [
+        (1, 'INV-001', '2024-01-01T10:00:00', 'waiter1', None),
+        (2, 'INV-002', '2024-01-01T11:00:00', 'waiter2', None),
+    ]
+
+    class MockDB:
+        def get_invoices_without_daily_closing(self, hours=12):
+            return mock_invoices
+
+    monkeypatch.setattr(server, "get_db", lambda: MockDB())
+
+    with app.test_client() as client:
+        resp = client.get("/api/invoice/without_daily_closing")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["data"] == [list(item) for item in mock_invoices]
+
+
+def test_api_get_invoices_without_daily_closing_count(monkeypatch):
+    app = server.app
+
+    # Mock DB that can return different values
+    class MockDB:
+        def __init__(self, return_value):
+            self._return_value = return_value
+
+        def get_invoices_without_daily_closing(self, hours=12):
+            return self._return_value
+
+    # Test with some invoices
+    monkeypatch.setattr(server, "get_db", lambda: MockDB([(1,), (2,), (3,)]))
+    with app.test_client() as client:
+        resp = client.get("/api/invoice/without_daily_closing_count")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["data"]["count"] == 3
+
+    # Test with zero invoices (empty list)
+    monkeypatch.setattr(server, "get_db", lambda: MockDB([]))
+    with app.test_client() as client:
+        resp_zero = client.get("/api/invoice/without_daily_closing_count")
+        assert resp_zero.status_code == 200
+        data_zero = resp_zero.get_json()
+        assert data_zero["success"] is True
+        assert data_zero["data"]["count"] == 0
+
+    # Test with None from DB to ensure `or []` logic works
+    monkeypatch.setattr(server, "get_db", lambda: MockDB(None))
+    with app.test_client() as client:
+        resp_none = client.get("/api/invoice/without_daily_closing_count")
+        assert resp_none.status_code == 200
+        data_none = resp_none.get_json()
+        assert data_none["success"] is True
+        assert data_none["data"]["count"] == 0
+
+
 def test_api_set_init_inventory(monkeypatch):
     app = server.app
     # Mock DB
