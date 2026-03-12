@@ -316,7 +316,7 @@ class DatabaseRepository:
             select rechnung_nr, rechnung_dt_erstellung, rechnung_detail_absmenge, 
             rechnung_detail_preis*rechnung_detail_absmenge, rechnung_detail_text,
             (select sum(rechnung_detail_absmenge*rechnung_detail_preis) from rechnungen_details where rechnung_detail_rechnung = rechnung_id) as total,
-            case mwst_satz when 10.00 then 'A' when 20.00 then 'B' when 5.00 then 'C' end as mwstsatz,
+            case mwst_satz when 10.00 then 'A' when 20.00 then 'B' when 5.00 then 'C' when 13.00 then 'D' end as mwstsatz,
             (rechnung_detail_preis*rechnung_detail_absmenge)/(100+mwst_satz)*mwst_satz as mwst,
             mwst_bezeichnung, rechnung_tischCode, rechnung_kellnerKurzName,
             rechnung_kassenidentifikation, rechnung_barumsatz_nr, dbo.GetMachineCodeQr(rechnung_id),
