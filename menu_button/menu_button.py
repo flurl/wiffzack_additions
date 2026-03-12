@@ -60,11 +60,12 @@ FRONTEND_URLS: dict[str, str] = {
     "request_restart": "/api/restart",
     "alarm": "/alarm?terminal={client}",
     "jotd": "/jotd",
-    "checklists": "/checklist?mode=complete&checklist_category={client}"
+    "checklists": "/checklist?mode=complete&checklist_category={client}",
 }
 
 BACKEND_URLS: dict[str, str] = {
-    "check_for_closed_checklists": "/api/checklist/latest/by_category/{client}"
+    "check_for_closed_checklists": "/api/checklist/latest/by_category/{client}",
+    "invoices_without_closing_count": "/api/invoice/without_daily_closing_count",
 }
 
 CLIENT_NAME: LiteralString = config['client']['name']
@@ -153,6 +154,8 @@ class MenuButton(object):
         # Assign the Menu object to the Menubutton using the menu option
         self.menuBtn['menu'] = self.menu
         self.menuBtn.pack(side="left")
+
+        self.check_for_unclosed_invoices()
 
     def open_storage_mask(self, mode: str) -> None:
         url: str = f"http://{WEB_SERVER}/storage/{mode}?terminal={CLIENT_NAME}"
@@ -267,6 +270,20 @@ class MenuButton(object):
             finally:  # enable always on top again
                 if os.name == 'nt':
                     root.wm_attributes("-topmost", 1)
+
+    def check_for_unclosed_invoices(self) -> None:
+        url: str = f"http://{WEB_SERVER}{BACKEND_URLS['invoices_without_closing_count']}"
+        try:
+            with urllib.request.urlopen(url) as response:
+                if response.status == 200:
+                    response_data = response.read().decode('utf-8')
+                    json_data = json.loads(response_data)
+                    if json_data.get("data", {}).get("count", 0) > 0:
+                        messagebox.showwarning(  # type: ignore
+                            "Möglicher fehlender Tagesabschluss", "Es wurden Rechnungen ohne Tagesabschluss gefunden. Bitte überprüfen.")
+        except Exception as e:
+            messagebox.showerror(  # type: ignore
+                "Möglicher fehlender Tagesabschluss", f"Fehler bei der Verbindung zum Server {url}: {e}")
 
     def check_checklists(self) -> bool:
         """

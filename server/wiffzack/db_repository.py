@@ -366,6 +366,16 @@ class DatabaseRepository:
         rows: DBResult = self.db.execute_query(query, params)
         return rows
 
+    def get_invoices_without_daily_closing(self, hours: int = 12) -> DBResult:
+        query: LiteralString = f"""
+            select * from rechnungen_basis
+            where 1=1
+            and checkpoint_tag is null
+            and datediff(hour, rechnung_dt_erstellung, getdate()) > %s
+        """
+        rows: DBResult = self.db.execute_query(query, (hours,))
+        return rows
+
     """********************
     ** RECIPES
     ********************"""

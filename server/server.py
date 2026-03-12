@@ -358,6 +358,8 @@ def set_init_inventory(storage_id: int) -> Response:
     return jsonify({'success': True})
 
 
+# region Invoices
+
 @app.route("/api/invoice/list", methods=["GET"])
 @app.route("/api/invoice/list/<string:waiter>", methods=["GET"])
 def get_invoice_list(waiter: str | None = None) -> Response:
@@ -464,6 +466,20 @@ def get_invoice_type(invoice_type_id: int | None = None) -> Response:
     result: DBResult = get_db().get_invoice_type(invoice_type_id)
     return mk_response(result)
 
+
+@app.route("/api/invoice/without_daily_closing", methods=["GET"])
+def get_invoices_without_daily_closing() -> Response:
+    result: DBResult = get_db().get_invoices_without_daily_closing()
+    return mk_response(result)
+
+
+@app.route("/api/invoice/without_daily_closing_count", methods=["GET"])
+def get_invoices_with_daily_closing_count() -> Response:
+    count: int = len(get_db().get_invoices_without_daily_closing())
+    return jsonify({'success': True, "data": {"count": count}})
+
+
+# region Messages
 
 @app.route("/api/message/list", methods=["GET"])
 def get_messages() -> Response:
@@ -618,8 +634,8 @@ def get_jotd() -> Response:
             f"An unexpected error occurred in get_jotd: {e}", exc_info=True)
         return mk_response(f"An unexpected error occurred: {str(e)}", heading="Error")
 
-# region Checklist related routes ---
 
+# region Checklist related routes ---
 
 @app.route("/api/checklist/list", methods=["GET"])
 def get_checklists() -> Response:
