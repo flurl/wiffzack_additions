@@ -404,6 +404,17 @@ const onInitClicked = () => {
 const onOKClicked = () => {
     let title = "";
 
+    // if selectedArticles is empty show a warning and do nothing    
+    if (Object.keys(selectedArticles.value).length === 0) {
+        showModal({
+            title: t('message.no_articles_selected'),
+            buttons: { ok: true, cancel: false },
+            type: 'info'
+        });
+        return;
+    }
+
+
     if (props.mode === "request") {
         title = t('message.request_articles')
     } else if (props.mode === "distribute") {
